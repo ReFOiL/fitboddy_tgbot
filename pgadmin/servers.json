@@ -1,0 +1,13 @@
+{
+  "Servers": {
+    "1": {
+      "Name": "fitboddy-postgres",
+      "Group": "Servers",
+      "Host": "postgres",
+      "Port": 5432,
+      "MaintenanceDB": "fitboddy",
+      "Username": "fitboddy",
+      "SSLMode": "prefer"
+    }
+  }
+}
