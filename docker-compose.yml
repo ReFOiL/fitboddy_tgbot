@@ -50,6 +50,34 @@ services:
     command: ["python", "-m", "watchfiles", "python -m src.main", "src"]
     restart: always
 
+  admin:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    volumes:
+      - ./src:/app/src
+    ports:
+      - "8000:8000"
+    command:
+      [
+        "python",
+        "-m",
+        "uvicorn",
+        "src.presentation.web_admin.asgi:create_admin_app",
+        "--factory",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload"
+      ]
+    restart: always
+
   prometheus:
     image: prom/prometheus
     volumes:

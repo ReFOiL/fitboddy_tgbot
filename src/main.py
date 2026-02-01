@@ -14,7 +14,7 @@ from src.infrastructure.database.seed import CustomQuestionSeeder, WorkoutTempla
 from src.presentation.telegram_bot.auto_import import import_handlers
 from src.presentation.telegram_bot.dispatcher import create_dispatcher
 from src.shared.config.settings import get_settings
-from src.shared.di.containers import Container
+from src.shared.di.bootstrap import build_container
 
 
 async def _run_bot() -> None:
@@ -26,8 +26,7 @@ async def _run_bot() -> None:
 
     import_handlers()
 
-    container = Container()
-    container.wire(packages=["src.presentation.telegram_bot.handlers", "src.presentation.web_admin"])
+    container = build_container()
 
     bot: Bot = container.bot()
     redis = Redis.from_url(settings.redis.url)

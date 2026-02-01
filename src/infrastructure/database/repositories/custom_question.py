@@ -23,7 +23,11 @@ class CustomQuestionRepository(SQLAlchemyRepository, ICustomQuestionRepository):
         return list(result.scalars().all())
 
     async def list_all(self) -> list[CustomQuestion]:
-        result = await self._session.execute(select(CustomQuestion).order_by(CustomQuestion.order))
+        result = await self._session.execute(
+            select(CustomQuestion)
+            .order_by(CustomQuestion.order)
+            .options(selectinload(CustomQuestion.options))
+        )
         return list(result.scalars().all())
 
     async def get(self, question_id: int) -> CustomQuestion | None:
