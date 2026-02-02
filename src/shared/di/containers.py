@@ -3,6 +3,7 @@ from aiogram import Bot
 from redis.asyncio import Redis
 
 from src.application.services.custom_question_admin import CustomQuestionAdminService
+from src.application.services.admin_users import AdminUserService
 from src.application.services.notification import NotificationService
 from src.application.services.profile_completion import ProfileCompletionService
 from src.application.services.questionnaire import QuestionnaireService
@@ -45,6 +46,8 @@ from src.presentation.web_admin.question_presenters import (
     QuestionPayloadBuilder,
     QuestionPresenter,
 )
+from src.presentation.web_admin.user_controller import UserController
+from src.presentation.web_admin.user_presenters import UserPresenter
 from src.shared.utils.profile_answers import AnswerLookup
 from src.infrastructure.cache.redis_repository import RedisCache
 from src.infrastructure.database.session import create_engine, create_session_factory
@@ -62,6 +65,7 @@ class Container(containers.DeclarativeContainer):
     questionnaire_flow_queries: providers.Provider[QuestionnaireFlowQueries]
     questionnaire_flow: providers.Provider[QuestionnaireFlow]
     workouts_flow: providers.Provider[WorkoutsFlow]
+    user_controller: providers.Provider[UserController]
     wiring_config = containers.WiringConfiguration(
         packages=["src.presentation.telegram_bot.handlers", "src.presentation.web_admin"]
     )
@@ -194,6 +198,14 @@ class Container(containers.DeclarativeContainer):
     custom_question_admin_service = providers.Factory(
         CustomQuestionAdminService,
         uow=uow,
+    )
+
+    admin_user_service = providers.Factory(AdminUserService, uow=uow)
+    user_presenter = providers.Factory(UserPresenter)
+    user_controller = providers.Factory(
+        UserController,
+        service=admin_user_service,
+        presenter=user_presenter,
     )
 
     options_normalizer = providers.Factory(OptionsNormalizer)

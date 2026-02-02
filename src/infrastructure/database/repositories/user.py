@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, desc
 
 from src.application.interfaces.repositories import IUserRepository
 from src.domain.entities.user import User
@@ -16,4 +16,8 @@ class UserRepository(SQLAlchemyRepository, IUserRepository):
 
     async def add(self, user: User) -> None:
         self._session.add(user)
+
+    async def list_all(self) -> list[User]:
+        result = await self._session.execute(select(User).order_by(desc(User.created_at)))
+        return list(result.scalars().all())
 
