@@ -10,7 +10,11 @@ from src.infrastructure.observability.prometheus_metrics import setup_prometheus
 import structlog
 
 from src.infrastructure.observability.structlog_config import setup_structlog
-from src.infrastructure.database.seed import CustomQuestionSeeder, WorkoutTemplateSeeder
+from src.infrastructure.database.seed import (
+    CustomQuestionSeeder,
+    WorkoutMvpFixturesSeeder,
+    WorkoutTemplateSeeder,
+)
 from src.presentation.telegram_bot.auto_import import import_handlers
 from src.presentation.telegram_bot.dispatcher import create_dispatcher
 from src.shared.config.settings import get_settings
@@ -32,6 +36,8 @@ async def _run_bot() -> None:
     redis = Redis.from_url(settings.redis.url)
     storage = RedisStorage(redis=redis)
 
+    seeded_mvp = await WorkoutMvpFixturesSeeder(container.uow()).run()
+    logger.info("seed.workout_mvp", added=seeded_mvp)
     seeded_templates = await WorkoutTemplateSeeder(container.uow()).run()
     logger.info("seed.workout_templates", added=seeded_templates)
     seeded_questions = await CustomQuestionSeeder(container.uow()).run()

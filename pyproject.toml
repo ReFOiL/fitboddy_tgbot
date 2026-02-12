@@ -24,6 +24,7 @@ dependencies = [
     "fastapi>=0.110",
     "uvicorn>=0.27",
     "watchfiles>=1.1.1",
+    "python-multipart>=0.0.22",
 ]
 
 [project.optional-dependencies]

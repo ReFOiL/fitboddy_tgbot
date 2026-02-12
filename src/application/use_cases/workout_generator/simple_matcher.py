@@ -80,10 +80,11 @@ class SimpleWorkoutMatcher:
         scores: dict[int, int] = {}
         template_by_id = {t.id: t for t in templates if t.id is not None}
         for answer in user_answers:
-            if not answer.question_key.startswith("custom:"):
+            key = getattr(answer.question, "key", "") if answer.question is not None else ""
+            if not key.startswith("custom:"):
                 continue
             try:
-                question_id = int(answer.question_key.split("custom:", 1)[1])
+                question_id = int(key.split("custom:", 1)[1])
             except ValueError:
                 continue
             linked = question_links.get(question_id)

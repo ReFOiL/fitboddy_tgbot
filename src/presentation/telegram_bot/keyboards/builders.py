@@ -4,6 +4,9 @@ from aiogram.types import KeyboardButton, ReplyKeyboardMarkup, ReplyKeyboardRemo
 
 MENU_QUESTIONNAIRE = "📝 Анкета"
 MENU_WORKOUTS = "🏋️ Тренировки"
+MENU_MY_PLAN = "📅 Мой план"
+MENU_TODAY_WORKOUT = "🏋️ На сегодня"
+MENU_MARK_DONE = "✅ Выполнено"
 
 
 def reply_keyboard(options: list[str], row_width: int = 2) -> ReplyKeyboardMarkup:
@@ -18,5 +21,11 @@ def remove_keyboard() -> ReplyKeyboardRemove:
 
 
 def main_menu() -> ReplyKeyboardMarkup:
-    options = [MENU_QUESTIONNAIRE, MENU_WORKOUTS]
+    options = [
+        MENU_QUESTIONNAIRE,
+        MENU_WORKOUTS,
+        MENU_MY_PLAN,
+        MENU_TODAY_WORKOUT,
+        MENU_MARK_DONE,
+    ]
     return reply_keyboard(options, row_width=2)

@@ -4,6 +4,10 @@ from redis.asyncio import Redis
 
 from src.application.services.custom_question_admin import CustomQuestionAdminService
 from src.application.services.admin_users import AdminUserService
+from src.application.services.exercise_admin import ExerciseAdminService
+from src.application.services.muscle_admin import MuscleAdminService
+from src.application.services.contraindication_admin import ContraindicationAdminService
+from src.application.services.workout_template_admin import WorkoutTemplateAdminService
 from src.application.services.notification import NotificationService
 from src.application.services.profile_completion import ProfileCompletionService
 from src.application.services.questionnaire import QuestionnaireService
@@ -35,6 +39,9 @@ from src.application.services.subscription import SubscriptionService
 from src.application.services.value_casting import LenientCaster
 from src.application.use_cases.payment.cryptobot import CryptoBotPaymentUseCase
 from src.application.use_cases.workout_generator.simple_matcher import SimpleWorkoutMatcher
+from src.application.services.workout_matcher import WorkoutMatcher
+from src.application.services.workout_scheduler import WorkoutScheduler
+from src.application.services.user_plan_service import UserPlanService
 from src.presentation.telegram_bot.flows.questionnaire.flow_service import QuestionnaireFlow
 from src.presentation.telegram_bot.flows.questionnaire.presenter import QuestionnairePresenter
 from src.presentation.telegram_bot.flows.workouts.flow_service import WorkoutsFlow
@@ -48,11 +55,17 @@ from src.presentation.web_admin.question_presenters import (
 )
 from src.presentation.web_admin.user_controller import UserController
 from src.presentation.web_admin.user_presenters import UserPresenter
+from src.presentation.web_admin.exercise_controller import ExerciseController
+from src.presentation.web_admin.muscle_controller import MuscleController
+from src.presentation.web_admin.contraindication_controller import ContraindicationController
+from src.presentation.web_admin.workout_template_controller import WorkoutTemplateController
 from src.shared.utils.profile_answers import AnswerLookup
 from src.infrastructure.cache.redis_repository import RedisCache
 from src.infrastructure.database.session import create_engine, create_session_factory
 from src.infrastructure.database.unit_of_work import SQLAlchemyUnitOfWork
 from src.infrastructure.external.cryptobot.client import CryptoBotClient
+from src.infrastructure.external.file_storage import VideoFileStorage
+from src.infrastructure.external.minio_client import MinioClient
 from src.infrastructure.external.s3_storage.minio_client import MinioStorage
 from src.infrastructure.external.telegram.bot_client import TelegramNotifier
 from src.shared.config.settings import get_settings
@@ -92,6 +105,19 @@ class Container(containers.DeclarativeContainer):
         secret_key=providers.Callable(lambda: get_settings().minio.secret_key),
         secure=providers.Callable(lambda: get_settings().minio.secure),
     )
+    minio_client = providers.Singleton(
+        MinioClient,
+        endpoint=providers.Callable(lambda: get_settings().minio.endpoint),
+        access_key=providers.Callable(lambda: get_settings().minio.access_key),
+        secret_key=providers.Callable(lambda: get_settings().minio.secret_key),
+        secure=providers.Callable(lambda: get_settings().minio.secure),
+        presigned_endpoint=providers.Callable(lambda: get_settings().minio.public_endpoint),
+    )
+    video_file_storage = providers.Singleton(
+        VideoFileStorage,
+        client=minio_client,
+        bucket=providers.Callable(lambda: get_settings().minio.bucket),
+    )
 
     notifier = providers.Factory(TelegramNotifier, bot=bot)
     notification_service = providers.Factory(NotificationService, notifier=notifier)
@@ -113,6 +139,19 @@ class Container(containers.DeclarativeContainer):
     workout_matcher = providers.Factory(
         SimpleWorkoutMatcher,
         lookup_factory=answer_lookup_builder,
+    )
+    workout_matcher_v2 = providers.Factory(
+        WorkoutMatcher,
+        lookup_factory=answer_lookup_builder,
+    )
+    workout_scheduler = providers.Singleton(WorkoutScheduler)
+    link_map_builder = providers.Factory(LinkMapBuilder)
+    user_plan_service = providers.Factory(
+        UserPlanService,
+        uow=uow,
+        matcher=workout_matcher,
+        scheduler=workout_scheduler,
+        link_map_builder=link_map_builder,
     )
 
     text_validator = providers.Factory(TextValidator)
@@ -186,7 +225,6 @@ class Container(containers.DeclarativeContainer):
     )
 
     workout_plan_presenter = providers.Factory(WorkoutPlanPresenter)
-    link_map_builder = providers.Factory(LinkMapBuilder)
     workouts_flow = providers.Factory(
         WorkoutsFlow,
         uow=uow,
@@ -219,5 +257,30 @@ class Container(containers.DeclarativeContainer):
         service=custom_question_admin_service,
         builder=question_payload_builder,
         presenter=question_presenter,
+    )
+
+    exercise_admin_service = providers.Factory(ExerciseAdminService, uow=uow)
+    muscle_admin_service = providers.Factory(MuscleAdminService, uow=uow)
+    contraindication_admin_service = providers.Factory(ContraindicationAdminService, uow=uow)
+    workout_template_admin_service = providers.Factory(
+        WorkoutTemplateAdminService,
+        uow=uow,
+    )
+    exercise_controller = providers.Factory(
+        ExerciseController,
+        service=exercise_admin_service,
+        video_storage=video_file_storage,
+    )
+    muscle_controller = providers.Factory(
+        MuscleController,
+        service=muscle_admin_service,
+    )
+    contraindication_controller = providers.Factory(
+        ContraindicationController,
+        service=contraindication_admin_service,
+    )
+    workout_template_controller = providers.Factory(
+        WorkoutTemplateController,
+        service=workout_template_admin_service,
     )
 

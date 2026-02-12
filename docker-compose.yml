@@ -43,8 +43,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_started
     env_file:
       - .env
+    environment:
+      MINIO_ENDPOINT: minio:9000
     volumes:
       - ./src:/app/src
     command: ["python", "-m", "watchfiles", "python -m src.main", "src"]
@@ -57,8 +61,16 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      minio:
+        condition: service_started
     env_file:
       - .env
+    environment:
+      # Из контейнера MinIO доступен по имени сервиса, не localhost
+      MINIO_ENDPOINT: minio:9000
+      # Для presigned URL используем host.docker.internal (доступ к localhost хоста из контейнера)
+      # В браузере ссылки будут работать с localhost:9000
+      MINIO_PUBLIC_ENDPOINT: host.docker.internal:9000
     volumes:
       - ./src:/app/src
     ports:

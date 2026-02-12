@@ -5,6 +5,7 @@ import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
+from typing import Any
 
 from alembic import context
 from sqlalchemy import pool
@@ -20,9 +21,13 @@ from src.domain.entities import (  # noqa: E402,F401
     user,
     user_answer,
     exercise,
+    associations,
     workout,
+    training_plan,
     payment,
     questionnaire,
+    muscle,
+    contraindication,
 )
 
 config = context.config
@@ -57,7 +62,7 @@ async def run_migrations_online() -> None:
     )
 
     async with connectable.connect() as connection:
-        def do_run_migrations(sync_conn) -> None:
+        def do_run_migrations(sync_conn: Any) -> None:
             context.configure(
                 connection=sync_conn,
                 target_metadata=target_metadata,

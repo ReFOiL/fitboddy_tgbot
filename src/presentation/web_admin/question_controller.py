@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import structlog
+
 from src.application.services.custom_question_admin import CustomQuestionAdminService
 from src.presentation.web_admin.controller_base import BaseController
 from src.presentation.web_admin.controller_result import ControllerResult
@@ -11,6 +13,8 @@ from src.presentation.web_admin.question_schemas import (
     MessageOut,
     QuestionCreatedOut,
 )
+
+logger = structlog.get_logger()
 
 
 class QuestionController(BaseController):
@@ -34,6 +38,12 @@ class QuestionController(BaseController):
                 status_code=payload_result.status_code,
             )
         question = await self._service.create(payload_result.data or {})
+        logger.info(
+            "admin.question.created",
+            question_id=question.id,
+            key=question.key,
+            answer_type=str(question.answer_type),
+        )
         return self.ok(QuestionCreatedOut(id=question.id, message="Question created"))
 
     async def list_all(self) -> ControllerResult[list[CustomQuestionOut]]:
@@ -50,14 +60,22 @@ class QuestionController(BaseController):
             )
         try:
             await self._service.update(question_id, updates_result.data or {})
+            logger.info(
+                "admin.question.updated",
+                question_id=question_id,
+                updated_fields=list((updates_result.data or {}).keys()),
+            )
         except ValueError:
+            logger.warning("admin.question.update_not_found", question_id=question_id)
             return self.not_found("Question not found")
         return self.ok(MessageOut(message="Question updated"))
 
     async def deactivate(self, question_id: int) -> ControllerResult[MessageOut]:
         try:
             await self._service.deactivate(question_id)
+            logger.info("admin.question.deactivated", question_id=question_id)
         except ValueError:
+            logger.warning("admin.question.deactivate_not_found", question_id=question_id)
             return self.not_found("Question not found")
         return self.ok(MessageOut(message="Question deactivated"))
 
@@ -70,4 +88,5 @@ class QuestionController(BaseController):
 
     async def link_template(self, question_id: int, template_id: int) -> ControllerResult[MessageOut]:
         await self._service.link_template(question_id, template_id)
+        logger.info("admin.question.template_linked", question_id=question_id, template_id=template_id)
         return self.ok(MessageOut(message="Link created"))

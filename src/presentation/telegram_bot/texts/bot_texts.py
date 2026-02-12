@@ -12,6 +12,14 @@ class BotTexts(StrEnum):
     WORKOUTS_NO_MATCH = "Не удалось подобрать тренировки под вашу анкету."
     WORKOUTS_EXITED = "Возвращаю в главное меню."
 
+    PLAN_NO_PLAN = "Сначала пройдите анкету и получите план: нажмите «Тренировки» в меню."
+    PLAN_HEADER = "📅 Ваш план на месяц"
+    TODAY_NO_WORKOUT = "На сегодня тренировки нет. Отдыхайте! 💪"
+    TODAY_HEADER = "🏋️ Тренировка на сегодня"
+    EXERCISE_NO_EXERCISE = "Упражнение не найдено."
+    DONE_ALREADY = "Эта тренировка уже отмечена выполненной."
+    DONE_OK = "✅ Тренировка отмечена выполненной!"
+
     QUESTIONNAIRE_COMPLETED = "🎉 Анкета завершена!"
     QUESTIONNAIRE_FINISHED_PROMPT = "Анкета завершена. Что дальше?"
     QUESTIONNAIRE_LOAD_ERROR = "❌ Ошибка загрузки вопросов."

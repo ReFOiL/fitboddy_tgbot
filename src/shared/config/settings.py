@@ -51,7 +51,11 @@ class MinioSettings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-    endpoint: str
+    endpoint: str = Field(..., description="Internal endpoint for backend (e.g. minio:9000)")
+    public_endpoint: str | None = Field(
+        default=None,
+        description="Public endpoint for presigned URLs (reachable from browser), e.g. localhost:9000",
+    )
     secure: bool = False
     access_key: str = Field(..., alias="MINIO_ROOT_USER")
     secret_key: str = Field(..., alias="MINIO_ROOT_PASSWORD")

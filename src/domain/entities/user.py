@@ -31,6 +31,10 @@ class User(Base):
     cached_bmi: Mapped[float | None] = mapped_column(Float, nullable=True)
 
     workouts: Mapped[list["WorkoutTemplate"]] = relationship(back_populates="user")
+    training_plans: Mapped[list["TrainingPlan"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
     answers: Mapped[list["UserAnswer"]] = relationship(
         cascade="all, delete-orphan",
         back_populates="user",
@@ -38,5 +42,6 @@ class User(Base):
 
 
 from src.domain.entities.workout import WorkoutTemplate  # noqa: E402  # isort:skip
-from src.domain.entities.user_answer import UserAnswer  # type: ignore[import-not-found]  # noqa: E402  # isort:skip
+from src.domain.entities.training_plan import TrainingPlan  # noqa: E402  # isort:skip
+from src.domain.entities.user_answer import UserAnswer  # noqa: E402  # isort:skip
 
