@@ -8,6 +8,7 @@ from src.presentation.web_admin.controller_base import BaseController
 from src.presentation.web_admin.controller_result import ControllerResult
 from src.presentation.web_admin.workout_schemas import (
     MessageOut,
+    WorkoutExercisesOrderUpdate,
     WorkoutTemplateCreate,
     WorkoutTemplateOut,
     WorkoutTemplateUpdate,
@@ -67,6 +68,27 @@ class WorkoutTemplateController(BaseController):
             template_id=template.id,
             title=template.title,
             updated_fields=list(updates.keys()) + (["exercises"] if exercises is not None else []),
+        )
+        return self.ok(WorkoutTemplateOut.model_validate(template))
+
+    async def update_exercises_order(
+        self, template_id: int, data: WorkoutExercisesOrderUpdate
+    ) -> ControllerResult[WorkoutTemplateOut]:
+        template = await self._service.update_exercises_order(
+            template_id, data.exercise_ids
+        )
+        if template is None:
+            logger.warning(
+                "admin.workout_template.update_order_not_found_or_invalid",
+                template_id=template_id,
+            )
+            return self.not_found(
+                "Workout template not found or exercise_ids do not match template"
+            )
+        logger.info(
+            "admin.workout_template.exercises_order_updated",
+            template_id=template.id,
+            exercise_count=len(data.exercise_ids),
         )
         return self.ok(WorkoutTemplateOut.model_validate(template))
 

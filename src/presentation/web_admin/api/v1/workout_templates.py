@@ -7,6 +7,7 @@ from dependency_injector.wiring import Provide, inject
 from src.presentation.web_admin.auth import get_current_admin
 from src.presentation.web_admin.workout_schemas import (
     MessageOut,
+    WorkoutExercisesOrderUpdate,
     WorkoutTemplateCreate,
     WorkoutTemplateOut,
     WorkoutTemplateUpdate,
@@ -55,6 +56,20 @@ async def update_workout_template(
     controller: WorkoutTemplateController = Depends(Provide[Container.workout_template_controller]),
 ) -> WorkoutTemplateOut:
     return (await controller.update(template_id, data)).unwrap()
+
+
+@router.put(
+    "/workout-templates/{template_id}/exercises/order",
+    response_model=WorkoutTemplateOut,
+)
+@inject
+async def update_workout_exercises_order(
+    template_id: int,
+    data: WorkoutExercisesOrderUpdate,
+    _admin: str = Depends(get_current_admin),
+    controller: WorkoutTemplateController = Depends(Provide[Container.workout_template_controller]),
+) -> WorkoutTemplateOut:
+    return (await controller.update_exercises_order(template_id, data)).unwrap()
 
 
 @router.delete("/workout-templates/{template_id}", response_model=MessageOut)

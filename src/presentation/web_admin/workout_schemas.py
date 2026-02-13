@@ -141,6 +141,10 @@ class WorkoutTemplateUpdate(BaseModel):
     exercises: list[WorkoutExerciseCreate] | None = None
 
 
+class WorkoutExercisesOrderUpdate(BaseModel):
+    exercise_ids: list[int] = Field(..., min_length=1)
+
+
 class WorkoutTemplateOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

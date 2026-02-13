@@ -113,6 +113,24 @@ class WorkoutTemplateAdminService:
             await self._uow.commit()
         return template
 
+    async def update_exercises_order(
+        self, template_id: int, exercise_ids: list[int]
+    ) -> WorkoutTemplate | None:
+        async with self._uow:
+            template = await self._uow.workouts.get_by_id(template_id)
+            if template is None:
+                return None
+            by_exercise_id = {we.exercise_id: we for we in template.workout_exercises}
+            if len(exercise_ids) != len(by_exercise_id) or any(
+                eid not in by_exercise_id for eid in exercise_ids
+            ):
+                return None
+            for sort_order, ex_id in enumerate(exercise_ids):
+                by_exercise_id[ex_id].sort_order = sort_order
+            await self._uow.commit()
+            template = await self._uow.workouts.get_by_id(template_id)
+        return template
+
     async def delete(self, template_id: int) -> bool:
         async with self._uow:
             template = await self._uow.workouts.get_by_id(template_id)
