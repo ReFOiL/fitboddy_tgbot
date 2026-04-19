@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from dependency_injector.wiring import Provide, inject
 
-from src.presentation.web_admin.auth import get_current_admin
+from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.contraindication_controller import ContraindicationController
 from src.presentation.web_admin.workout_schemas import (
     ContraindicationCreate,
@@ -20,7 +20,7 @@ router = APIRouter()
 @router.get("/contraindications", response_model=list[ContraindicationOut])
 @inject
 async def list_contraindications(
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: ContraindicationController = Depends(Provide[Container.contraindication_controller]),
 ) -> list[ContraindicationOut]:
     return (await controller.list_all()).unwrap()
@@ -30,7 +30,7 @@ async def list_contraindications(
 @inject
 async def get_contraindication(
     contraindication_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: ContraindicationController = Depends(Provide[Container.contraindication_controller]),
 ) -> ContraindicationOut:
     return (await controller.get(contraindication_id)).unwrap()
@@ -40,7 +40,7 @@ async def get_contraindication(
 @inject
 async def create_contraindication(
     data: ContraindicationCreate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: ContraindicationController = Depends(Provide[Container.contraindication_controller]),
 ) -> ContraindicationOut:
     return (await controller.create(data)).unwrap()
@@ -51,7 +51,7 @@ async def create_contraindication(
 async def update_contraindication(
     contraindication_id: int,
     data: ContraindicationUpdate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: ContraindicationController = Depends(Provide[Container.contraindication_controller]),
 ) -> ContraindicationOut:
     return (await controller.update(contraindication_id, data)).unwrap()
@@ -61,7 +61,7 @@ async def update_contraindication(
 @inject
 async def delete_contraindication(
     contraindication_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: ContraindicationController = Depends(Provide[Container.contraindication_controller]),
 ) -> MessageOut:
     return (await controller.delete(contraindication_id)).unwrap()

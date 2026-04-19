@@ -8,7 +8,7 @@ from dependency_injector.wiring import Provide, inject
 from pydantic import BaseModel
 
 from src.infrastructure.external.file_storage import VideoFileStorage, VideoValidationError
-from src.presentation.web_admin.auth import get_current_admin, verify_admin_token
+from src.presentation.web_admin.auth import AdminPrincipal, decode_bearer_token, get_current_admin
 from src.shared.di.containers import Container
 
 logger = structlog.get_logger()
@@ -24,7 +24,7 @@ class VideoUploadOut(BaseModel):
 @inject
 async def upload_video(
     file: UploadFile = File(...),
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     video_storage: VideoFileStorage = Depends(Provide[Container.video_file_storage]),
 ) -> VideoUploadOut:
     if not file.filename:
@@ -61,26 +61,31 @@ async def upload_video(
 @inject
 async def get_video(
     object_key: str,
+    authorization: str | None = Header(default=None),
     x_admin_token: str | None = Header(default=None, alias="x-admin-token"),
-    token: str | None = Query(default=None, description="Admin token (for video src requests)"),
+    token: str | None = Query(default=None, description="JWT access token (for <video src>)"),
     video_storage: VideoFileStorage = Depends(Provide[Container.video_file_storage]),
 ) -> Response:
     """
     Прокси для просмотра видео из MinIO.
-    Вместо presigned URL отдаем ссылку на наш бэкенд, который проксирует запрос.
-    Токен можно передать через заголовок x-admin-token или query параметр token.
+    JWT: заголовок Authorization: Bearer …, либо x-admin-token / query token (сырой JWT).
     """
-    # Проверяем токен из заголовка или query параметра
-    admin_token = x_admin_token or token
-    if not admin_token or not verify_admin_token(admin_token):
-        logger.warning("admin.video.auth_failed", has_header_token=bool(x_admin_token), has_query_token=bool(token))
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid admin token")
-    
+    raw: str | None = None
+    if authorization and authorization.lower().startswith("bearer "):
+        raw = authorization[7:].strip()
+    raw = raw or x_admin_token or token
+    if not raw:
+        logger.warning("admin.video.auth_failed", reason="missing_token")
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Missing token")
+    try:
+        decode_bearer_token(raw)
+    except HTTPException:
+        raise
+
     if not object_key.startswith("videos/"):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid object key")
     try:
         data = await video_storage.client.download_bytes(bucket=video_storage.bucket, object_name=object_key)
-        # Определяем content-type по расширению
         content_type = "video/mp4" if object_key.endswith(".mp4") else "video/quicktime"
         logger.info("admin.video.proxied", object_key=object_key, size_bytes=len(data))
         return Response(content=data, media_type=content_type)

@@ -1,19 +1,27 @@
 from __future__ import annotations
 
-import structlog
+from contextlib import asynccontextmanager
 
+import structlog
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
 from src.presentation.web_admin.api import create_app
+from src.presentation.web_admin.admin_bootstrap import ensure_bootstrap_admin_account
 from src.shared.di.bootstrap import build_container
-
 logger = structlog.get_logger()
 
 
 def create_admin_app() -> FastAPI:
     container = build_container()
-    app = create_app()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        settings = container.settings()
+        await ensure_bootstrap_admin_account(container.session_factory(), settings)
+        yield
+
+    app = create_app(lifespan=lifespan)
     app.state.container = container
 
     @app.exception_handler(Exception)
@@ -33,4 +41,3 @@ def create_admin_app() -> FastAPI:
 
     logger.info("admin.app.started")
     return app
-

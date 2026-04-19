@@ -89,6 +89,28 @@ class AppSettings(BaseSettings):
         alias="FEATURE_PAYMENT_ENABLED",
         description="Если false — оплата выключена: CRYPTBOT_* не обязательны, доступ как у PREMIUM для всех.",
     )
+    admin_bootstrap_username: str = Field(
+        default="admin",
+        alias="ADMIN_BOOTSTRAP_USERNAME",
+        description="Логин первого суперпользователя (создаётся при пустой таблице admin_accounts).",
+    )
+    admin_bootstrap_password: str = Field(
+        default="",
+        alias="ADMIN_BOOTSTRAP_PASSWORD",
+        description="Пароль первого суперпользователя; пусто — запись не создаётся (таблица остаётся пустой).",
+    )
+    admin_jwt_secret: str = Field(
+        default="",
+        alias="ADMIN_JWT_SECRET",
+        description="Секрет HS256 для JWT админки; обязателен для входа.",
+    )
+    admin_jwt_expire_minutes: int = Field(
+        default=480,
+        alias="ADMIN_JWT_EXPIRE_MINUTES",
+        ge=5,
+        le=10080,
+        description="Срок жизни access-токена админки (минуты).",
+    )
     bot: BotSettings = BotSettings()
     database: DatabaseSettings = DatabaseSettings()
     redis: RedisSettings = RedisSettings()

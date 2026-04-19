@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Protocol, Self
 if TYPE_CHECKING:
     from src.application.specifications import Specification
 
+from src.domain.entities.admin_account import AdminAccount
 from src.domain.entities.user import User
 from src.domain.entities.user_answer import UserAnswer
 from src.domain.entities.exercise import Exercise
@@ -18,6 +19,16 @@ from src.domain.entities.muscle import Muscle
 from src.domain.entities.contraindication import Contraindication
 from src.domain.entities.equipment import Equipment
 from src.domain.entities.base import Base
+
+
+class IAdminAccountRepository(Protocol):
+    async def get_by_username(self, username: str) -> AdminAccount | None: ...
+    async def get_by_id(self, account_id: int) -> AdminAccount | None: ...
+    async def add(self, account: AdminAccount) -> None: ...
+    async def list_all(self) -> list[AdminAccount]: ...
+    async def count(self) -> int: ...
+    async def count_superusers(self) -> int: ...
+    async def delete(self, account_id: int) -> None: ...
 
 
 class IUserRepository(Protocol):
@@ -112,6 +123,7 @@ class IQuestionTemplateLinkRepository(Protocol):
 
 
 class UnitOfWork(Protocol):
+    admin_accounts: IAdminAccountRepository
     users: IUserRepository
     exercises: IExerciseRepository
     muscles: IMuscleRepository

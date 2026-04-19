@@ -3,7 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from dependency_injector.wiring import Provide, inject
 
-from src.presentation.web_admin.auth import get_current_admin
+from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.question_controller import QuestionController
 from src.presentation.web_admin.question_schemas import (
     CustomQuestionCreate,
@@ -25,7 +25,7 @@ router = APIRouter()
 @inject
 async def create_question(
     question_data: CustomQuestionCreate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> QuestionCreatedOut:
     return (await controller.create(question_data)).unwrap()
@@ -34,7 +34,7 @@ async def create_question(
 @router.get("/admin/questions", response_model=list[CustomQuestionOut])
 @inject
 async def list_questions(
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> list[CustomQuestionOut]:
     return (await controller.list_all()).unwrap()
@@ -45,7 +45,7 @@ async def list_questions(
 async def update_question(
     question_id: int,
     question_data: CustomQuestionUpdate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> MessageOut:
     return (await controller.update(question_id, question_data)).unwrap()
@@ -55,7 +55,7 @@ async def update_question(
 @inject
 async def delete_question(
     question_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> MessageOut:
     return (await controller.deactivate(question_id)).unwrap()
@@ -66,7 +66,7 @@ async def delete_question(
 async def update_question_order(
     question_id: int,
     order_data: QuestionOrderUpdate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> MessageOut:
     return (await controller.update_order(question_id, order_data)).unwrap()
@@ -77,7 +77,7 @@ async def update_question_order(
 async def link_question_to_template(
     question_id: int,
     template_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> MessageOut:
     return (await controller.link_template(question_id, template_id)).unwrap()
@@ -87,7 +87,7 @@ async def link_question_to_template(
 @inject
 async def list_scoring_weights(
     question_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> list[ScoringWeightOut]:
     return (await controller.list_scoring_weights(question_id)).unwrap()
@@ -98,7 +98,7 @@ async def list_scoring_weights(
 async def create_or_update_scoring_weight(
     question_id: int,
     data: ScoringWeightCreate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> ScoringWeightOut:
     return (await controller.create_or_update_scoring_weight(question_id, data)).unwrap()
@@ -109,7 +109,7 @@ async def create_or_update_scoring_weight(
 async def delete_scoring_weight(
     question_id: int,
     answer_value: str,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> MessageOut:
     return (await controller.delete_scoring_weight(question_id, answer_value)).unwrap()

@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from dependency_injector.wiring import Provide, inject
 
-from src.presentation.web_admin.auth import get_current_admin
+from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.equipment_controller import EquipmentController
 from src.presentation.web_admin.equipment_schemas import EquipmentCreate, EquipmentOut, EquipmentUpdate
 from src.presentation.web_admin.workout_schemas import MessageOut
@@ -18,7 +18,7 @@ router = APIRouter()
 async def list_equipment(
     is_active: bool | None = Query(default=None, description="Filter by active status"),
     category: str | None = Query(default=None, description="Filter by category"),
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: EquipmentController = Depends(Provide[Container.equipment_controller]),
 ) -> list[EquipmentOut]:
     return (await controller.list_all(is_active=is_active, category=category)).unwrap()
@@ -28,7 +28,7 @@ async def list_equipment(
 @inject
 async def get_equipment(
     equipment_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: EquipmentController = Depends(Provide[Container.equipment_controller]),
 ) -> EquipmentOut:
     return (await controller.get(equipment_id)).unwrap()
@@ -38,7 +38,7 @@ async def get_equipment(
 @inject
 async def create_equipment(
     data: EquipmentCreate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: EquipmentController = Depends(Provide[Container.equipment_controller]),
 ) -> EquipmentOut:
     return (await controller.create(data)).unwrap()
@@ -49,7 +49,7 @@ async def create_equipment(
 async def update_equipment(
     equipment_id: int,
     data: EquipmentUpdate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: EquipmentController = Depends(Provide[Container.equipment_controller]),
 ) -> EquipmentOut:
     return (await controller.update(equipment_id, data)).unwrap()
@@ -59,7 +59,7 @@ async def update_equipment(
 @inject
 async def delete_equipment(
     equipment_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: EquipmentController = Depends(Provide[Container.equipment_controller]),
 ) -> MessageOut:
     return (await controller.delete(equipment_id)).unwrap()

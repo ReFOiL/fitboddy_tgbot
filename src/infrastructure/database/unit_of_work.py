@@ -16,6 +16,7 @@ from src.infrastructure.database.repositories.user_answer import UserAnswerRepos
 from src.infrastructure.database.repositories.workout import WorkoutTemplateRepository
 from src.infrastructure.database.repositories.training_plan import TrainingPlanRepository
 from src.infrastructure.database.repositories.scheduled_workout import ScheduledWorkoutRepository
+from src.infrastructure.database.repositories.admin_account import AdminAccountRepository
 from src.infrastructure.database.repositories.equipment import EquipmentRepository
 from src.domain.entities.base import Base
 
@@ -27,6 +28,7 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
 
     async def __aenter__(self) -> "SQLAlchemyUnitOfWork":
         self._session = self._session_factory()
+        self.admin_accounts = AdminAccountRepository(self._session)
         self.users = UserRepository(self._session)
         self.exercises = ExerciseRepository(self._session)
         self.muscles = MuscleRepository(self._session)

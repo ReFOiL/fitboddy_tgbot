@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from dependency_injector.wiring import Provide, inject
 
-from src.presentation.web_admin.auth import get_current_admin
+from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.workout_schemas import (
     MessageOut,
     WorkoutExercisesOrderUpdate,
@@ -21,7 +21,7 @@ router = APIRouter()
 @router.get("/workout-templates", response_model=list[WorkoutTemplateOut])
 @inject
 async def list_workout_templates(
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: WorkoutTemplateController = Depends(Provide[Container.workout_template_controller]),
 ) -> list[WorkoutTemplateOut]:
     return (await controller.list_all()).unwrap()
@@ -31,7 +31,7 @@ async def list_workout_templates(
 @inject
 async def get_workout_template(
     template_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: WorkoutTemplateController = Depends(Provide[Container.workout_template_controller]),
 ) -> WorkoutTemplateOut:
     return (await controller.get(template_id)).unwrap()
@@ -41,7 +41,7 @@ async def get_workout_template(
 @inject
 async def create_workout_template(
     data: WorkoutTemplateCreate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: WorkoutTemplateController = Depends(Provide[Container.workout_template_controller]),
 ) -> WorkoutTemplateOut:
     return (await controller.create(data)).unwrap()
@@ -52,7 +52,7 @@ async def create_workout_template(
 async def update_workout_template(
     template_id: int,
     data: WorkoutTemplateUpdate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: WorkoutTemplateController = Depends(Provide[Container.workout_template_controller]),
 ) -> WorkoutTemplateOut:
     return (await controller.update(template_id, data)).unwrap()
@@ -66,7 +66,7 @@ async def update_workout_template(
 async def update_workout_exercises_order(
     template_id: int,
     data: WorkoutExercisesOrderUpdate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: WorkoutTemplateController = Depends(Provide[Container.workout_template_controller]),
 ) -> WorkoutTemplateOut:
     return (await controller.update_exercises_order(template_id, data)).unwrap()
@@ -76,7 +76,7 @@ async def update_workout_exercises_order(
 @inject
 async def delete_workout_template(
     template_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: WorkoutTemplateController = Depends(Provide[Container.workout_template_controller]),
 ) -> MessageOut:
     return (await controller.delete(template_id)).unwrap()

@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends
 from dependency_injector.wiring import Provide, inject
 
-from src.presentation.web_admin.auth import get_current_admin
+from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.muscle_controller import MuscleController
 from src.presentation.web_admin.workout_schemas import MessageOut, MuscleCreate, MuscleOut, MuscleUpdate
 from src.shared.di.containers import Container
@@ -15,7 +15,7 @@ router = APIRouter()
 @router.get("/muscles", response_model=list[MuscleOut])
 @inject
 async def list_muscles(
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: MuscleController = Depends(Provide[Container.muscle_controller]),
 ) -> list[MuscleOut]:
     return (await controller.list_all()).unwrap()
@@ -25,7 +25,7 @@ async def list_muscles(
 @inject
 async def get_muscle(
     muscle_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: MuscleController = Depends(Provide[Container.muscle_controller]),
 ) -> MuscleOut:
     return (await controller.get(muscle_id)).unwrap()
@@ -35,7 +35,7 @@ async def get_muscle(
 @inject
 async def create_muscle(
     data: MuscleCreate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: MuscleController = Depends(Provide[Container.muscle_controller]),
 ) -> MuscleOut:
     return (await controller.create(data)).unwrap()
@@ -46,7 +46,7 @@ async def create_muscle(
 async def update_muscle(
     muscle_id: int,
     data: MuscleUpdate,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: MuscleController = Depends(Provide[Container.muscle_controller]),
 ) -> MuscleOut:
     return (await controller.update(muscle_id, data)).unwrap()
@@ -56,7 +56,7 @@ async def update_muscle(
 @inject
 async def delete_muscle(
     muscle_id: int,
-    _admin: str = Depends(get_current_admin),
+    _admin: AdminPrincipal = Depends(get_current_admin),
     controller: MuscleController = Depends(Provide[Container.muscle_controller]),
 ) -> MessageOut:
     return (await controller.delete(muscle_id)).unwrap()

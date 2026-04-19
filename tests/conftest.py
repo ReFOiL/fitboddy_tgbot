@@ -16,6 +16,7 @@ if str(project_root) not in sys.path:
 
 from src.domain.entities.base import Base
 from src.domain.entities import (  # noqa: F401 — побочный эффект: все ORM-модели в реестре до первого User()
+    admin_account,
     associations,
     contraindication,
     exercise,

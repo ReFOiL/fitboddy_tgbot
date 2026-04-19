@@ -17,16 +17,18 @@ for parent in Path(__file__).resolve().parents:
 
 from src.domain.entities.base import Base  # noqa: E402
 from src.domain.entities import (  # noqa: E402,F401
-    user,
-    user_answer,
-    exercise,
+    admin_account,
     associations,
-    workout,
-    training_plan,
+    contraindication,
+    equipment,
+    exercise,
+    muscle,
     payment,
     questionnaire,
-    muscle,
-    contraindication,
+    training_plan,
+    user,
+    user_answer,
+    workout,
 )
 
 config = context.config
