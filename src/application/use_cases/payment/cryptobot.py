@@ -5,6 +5,7 @@ from src.application.interfaces.repositories import UnitOfWork
 from src.application.services.notification import NotificationService
 from src.application.services.subscription import SubscriptionService
 from src.domain.entities.payment import Payment, PaymentStatus
+from src.shared.config.settings import get_settings
 
 
 class CryptoBotPaymentUseCase:
@@ -21,6 +22,8 @@ class CryptoBotPaymentUseCase:
         self._notifications = notification_service
 
     async def create_invoice(self, user_id: int, amount: float) -> str:
+        if not get_settings().feature_payment_enabled:
+            raise RuntimeError("Оплата отключена (FEATURE_PAYMENT_ENABLED=false).")
         invoice = await self._gateway.create_invoice(user_id=user_id, amount=amount)
         async with self._uow:
             payment = Payment(user_id=user_id, invoice_id=invoice.id, amount=amount)

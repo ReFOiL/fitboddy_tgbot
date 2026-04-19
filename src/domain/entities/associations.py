@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import DateTime, ForeignKey, Integer, String, func
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Table, Column, UniqueConstraint, func, Index
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.entities.base import Base
@@ -11,6 +11,8 @@ from src.domain.entities.base import Base
 if TYPE_CHECKING:
     from src.domain.entities.exercise import Exercise
     from src.domain.entities.workout import WorkoutTemplate
+    from src.domain.entities.equipment import Equipment
+    from src.domain.entities.user import User
 
 
 class WorkoutExercise(Base):
@@ -45,6 +47,18 @@ class WorkoutExercise(Base):
         onupdate=func.now(),
     )
 
-    workout_template: Mapped["WorkoutTemplate"] = relationship(back_populates="workout_exercises")
-    exercise: Mapped["Exercise"] = relationship(back_populates="workout_exercises")
+    workout_template: Mapped[WorkoutTemplate] = relationship(back_populates="workout_exercises")
+    exercise: Mapped[Exercise] = relationship(back_populates="workout_exercises")
 
+
+# Ассоциативные таблицы для many-to-many связей
+
+workout_template_equipment = Table(
+    "workout_template_equipment",
+    Base.metadata,
+    Column("workout_template_id", ForeignKey("workout_templates.id", ondelete="CASCADE"), primary_key=True, index=True),
+    Column("equipment_id", ForeignKey("equipment.id", ondelete="CASCADE"), primary_key=True, index=True),
+    # Индексы для оптимизации JOIN'ов в обоих направлениях
+    Index("idx_wt_equipment_template", "workout_template_id"),
+    Index("idx_wt_equipment_equipment", "equipment_id"),
+)

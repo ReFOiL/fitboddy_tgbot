@@ -20,11 +20,19 @@ class WorkoutTemplateSeeder:
             existing = await self._uow.workouts.list_all()
             if existing:
                 return 0
-            templates = get_default_templates()
-            for template in templates:
+            templates_data = get_default_templates()
+            
+            # Устанавливаем связи required_equipment на основе имени оборудования
+            for template, equipment_name in templates_data:
+                if equipment_name:
+                    # Ищем Equipment по name
+                    equipment = await self._uow.equipment.get_by_name(equipment_name)
+                    if equipment:
+                        template.required_equipment.append(equipment)
+                
                 await self._uow.workouts.add(template)
             await self._uow.commit()
-            return len(templates)
+            return len(templates_data)
 
 
 class WorkoutMvpFixturesSeeder:
@@ -135,71 +143,94 @@ class WorkoutMvpFixturesSeeder:
         def ex(name: str) -> Exercise:
             return ex_by_name[name]
 
-        templates: list[WorkoutTemplate] = [
-            WorkoutTemplate(
-                title="Силовая — Full Body (новичок)",
-                goal="muscle_gain",
-                difficulty=WorkoutDifficulty.LOW,
-                equipment="dumbbells",
-                days_per_week=3,
-                description="Базовая силовая на все тело.",
-                is_active=True,
-                workout_exercises=[
-                    WorkoutExercise(exercise=ex("Присед"), sort_order=1, sets=3, reps=10, rest_seconds=60),
-                    WorkoutExercise(exercise=ex("Жим над головой"), sort_order=2, sets=3, reps=10, rest_seconds=60),
-                    WorkoutExercise(exercise=ex("Тяга гантели в наклоне"), sort_order=3, sets=3, reps=12, rest_seconds=60),
-                    WorkoutExercise(exercise=ex("Планка"), sort_order=4, duration_seconds=45, rest_seconds=45),
-                ],
+        templates_data: list[tuple[WorkoutTemplate, str | None]] = [
+            (
+                WorkoutTemplate(
+                    title="Силовая — Full Body (новичок)",
+                    goal="muscle_gain",
+                    difficulty=WorkoutDifficulty.LOW,
+                    days_per_week=3,
+                    description="Базовая силовая на все тело.",
+                    is_active=True,
+                    intensity_factor=1.0,
+                    workout_category="full_body",
+                    workout_exercises=[
+                        WorkoutExercise(exercise=ex("Присед"), sort_order=1, sets=3, reps=10, rest_seconds=60),
+                        WorkoutExercise(exercise=ex("Жим над головой"), sort_order=2, sets=3, reps=10, rest_seconds=60),
+                        WorkoutExercise(exercise=ex("Тяга гантели в наклоне"), sort_order=3, sets=3, reps=12, rest_seconds=60),
+                        WorkoutExercise(exercise=ex("Планка"), sort_order=4, duration_seconds=45, rest_seconds=45),
+                    ],
+                ),
+                "dumbbells",
             ),
-            WorkoutTemplate(
-                title="Похудение — Кардио круговая (дом)",
-                goal="weight_loss",
-                difficulty=WorkoutDifficulty.LOW,
-                equipment="none",
-                days_per_week=3,
-                description="Короткие круги + базовые движения.",
-                is_active=True,
-                workout_exercises=[
-                    WorkoutExercise(exercise=ex("Прыжки Jumping Jacks"), sort_order=1, duration_seconds=45, rest_seconds=20),
-                    WorkoutExercise(exercise=ex("Берпи"), sort_order=2, sets=3, reps=10, rest_seconds=60),
-                    WorkoutExercise(exercise=ex("Выпады"), sort_order=3, sets=3, reps=12, rest_seconds=60),
-                    WorkoutExercise(exercise=ex("Планка"), sort_order=4, duration_seconds=45, rest_seconds=45),
-                ],
+            (
+                WorkoutTemplate(
+                    title="Похудение — Кардио круговая (дом)",
+                    goal="weight_loss",
+                    difficulty=WorkoutDifficulty.LOW,
+                    days_per_week=3,
+                    description="Короткие круги + базовые движения.",
+                    is_active=True,
+                    intensity_factor=0.8,
+                    workout_category="cardio",
+                    workout_exercises=[
+                        WorkoutExercise(exercise=ex("Прыжки Jumping Jacks"), sort_order=1, duration_seconds=45, rest_seconds=20),
+                        WorkoutExercise(exercise=ex("Берпи"), sort_order=2, sets=3, reps=10, rest_seconds=60),
+                        WorkoutExercise(exercise=ex("Выпады"), sort_order=3, sets=3, reps=12, rest_seconds=60),
+                        WorkoutExercise(exercise=ex("Планка"), sort_order=4, duration_seconds=45, rest_seconds=45),
+                    ],
+                ),
+                None,  # Без оборудования
             ),
-            WorkoutTemplate(
-                title="Силовая — База со штангой",
-                goal="muscle_gain",
-                difficulty=WorkoutDifficulty.MEDIUM,
-                equipment="barbell",
-                days_per_week=3,
-                description="База: присед/жим/становая.",
-                is_active=True,
-                workout_exercises=[
-                    WorkoutExercise(exercise=ex("Присед"), sort_order=1, sets=5, reps=5, rest_seconds=120),
-                    WorkoutExercise(exercise=ex("Жим лежа"), sort_order=2, sets=5, reps=5, rest_seconds=120),
-                    WorkoutExercise(exercise=ex("Тяга (становая)"), sort_order=3, sets=3, reps=5, rest_seconds=180),
-                ],
+            (
+                WorkoutTemplate(
+                    title="Силовая — База со штангой",
+                    goal="muscle_gain",
+                    difficulty=WorkoutDifficulty.MEDIUM,
+                    days_per_week=3,
+                    description="База: присед/жим/становая.",
+                    is_active=True,
+                    intensity_factor=1.5,
+                    workout_category="full_body",
+                    workout_exercises=[
+                        WorkoutExercise(exercise=ex("Присед"), sort_order=1, sets=5, reps=5, rest_seconds=120),
+                        WorkoutExercise(exercise=ex("Жим лежа"), sort_order=2, sets=5, reps=5, rest_seconds=120),
+                        WorkoutExercise(exercise=ex("Тяга (становая)"), sort_order=3, sets=3, reps=5, rest_seconds=180),
+                    ],
+                ),
+                "barbell",
             ),
-            WorkoutTemplate(
-                title="Выносливость — базовая",
-                goal="endurance",
-                difficulty=WorkoutDifficulty.MEDIUM,
-                equipment="none",
-                days_per_week=4,
-                description="Кардио+корпус.",
-                is_active=True,
-                workout_exercises=[
-                    WorkoutExercise(exercise=ex("Прыжки Jumping Jacks"), sort_order=1, duration_seconds=60, rest_seconds=20),
-                    WorkoutExercise(exercise=ex("Берпи"), sort_order=2, sets=4, reps=8, rest_seconds=60),
-                    WorkoutExercise(exercise=ex("Планка"), sort_order=3, duration_seconds=60, rest_seconds=30),
-                ],
+            (
+                WorkoutTemplate(
+                    title="Выносливость — базовая",
+                    goal="endurance",
+                    difficulty=WorkoutDifficulty.MEDIUM,
+                    days_per_week=4,
+                    description="Кардио+корпус.",
+                    is_active=True,
+                    intensity_factor=1.2,
+                    workout_category="cardio",
+                    workout_exercises=[
+                        WorkoutExercise(exercise=ex("Прыжки Jumping Jacks"), sort_order=1, duration_seconds=60, rest_seconds=20),
+                        WorkoutExercise(exercise=ex("Берпи"), sort_order=2, sets=4, reps=8, rest_seconds=60),
+                        WorkoutExercise(exercise=ex("Планка"), sort_order=3, duration_seconds=60, rest_seconds=30),
+                    ],
+                ),
+                None,  # Без оборудования
             ),
         ]
 
         added = 0
-        for tpl in templates:
+        for tpl, equipment_name in templates_data:
             if tpl.title in by_title:
                 continue
+            
+            # Устанавливаем связи required_equipment на основе имени оборудования
+            if equipment_name:
+                equipment = await self._uow.equipment.get_by_name(equipment_name)
+                if equipment:
+                    tpl.required_equipment.append(equipment)
+            
             await self._uow.workouts.add(tpl)
             added += 1
         return added
@@ -209,6 +240,7 @@ class CustomQuestionSeedCatalog:
     def system_questions(self) -> list[CustomQuestion]:
         return [
             CustomQuestion(
+                is_system=True,
                 key="system:goal",
                 order=1,
                 text="Цель тренировок:",
@@ -223,6 +255,7 @@ class CustomQuestionSeedCatalog:
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:level",
                 order=2,
                 text="Уровень подготовки:",
@@ -235,6 +268,7 @@ class CustomQuestionSeedCatalog:
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:gender",
                 order=3,
                 text="Пол:",
@@ -242,11 +276,11 @@ class CustomQuestionSeedCatalog:
                 options=[
                     CustomQuestionOption(value="male", label="👨 Мужской", sort_order=1),
                     CustomQuestionOption(value="female", label="👩 Женский", sort_order=2),
-                    CustomQuestionOption(value="other", label="🧑 Другое", sort_order=3),
                 ],
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:age",
                 order=4,
                 text="Возраст:",
@@ -256,6 +290,7 @@ class CustomQuestionSeedCatalog:
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:height",
                 order=5,
                 text="Рост в см:",
@@ -265,6 +300,7 @@ class CustomQuestionSeedCatalog:
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:weight",
                 order=6,
                 text="Вес в кг:",
@@ -274,6 +310,7 @@ class CustomQuestionSeedCatalog:
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:activity",
                 order=7,
                 text="Активность:",
@@ -288,6 +325,7 @@ class CustomQuestionSeedCatalog:
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:equipment",
                 order=8,
                 text="Оборудование:",
@@ -303,6 +341,7 @@ class CustomQuestionSeedCatalog:
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:workouts_per_week",
                 order=9,
                 text="Тренировок в неделю:",
@@ -312,6 +351,7 @@ class CustomQuestionSeedCatalog:
                 is_required=True,
             ),
             CustomQuestion(
+                is_system=True,
                 key="system:workout_location",
                 order=10,
                 text="Место тренировок:",

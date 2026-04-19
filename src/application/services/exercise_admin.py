@@ -1,10 +1,23 @@
 """Админ-сервис: CRUD упражнений."""
 from __future__ import annotations
 
+from typing import TypedDict
+
 from src.application.interfaces.repositories import UnitOfWork
 from src.domain.entities.contraindication import Contraindication
 from src.domain.entities.exercise import Exercise
 from src.domain.entities.muscle import Muscle
+
+
+class ExerciseUpdates(TypedDict, total=False):
+    name: str
+    description: str | None
+    video_url: str | None
+    equipment: str | None
+    is_cardio: bool
+    difficulty: int
+    muscle_ids: list[int]
+    contraindication_ids: list[int]
 
 
 class ExerciseAdminService:
@@ -73,7 +86,7 @@ class ExerciseAdminService:
             await self._uow.refresh(exercise)
         return exercise
 
-    async def update(self, exercise_id: int, **updates: object) -> Exercise | None:
+    async def update(self, exercise_id: int, **updates: str | int | bool | list[int] | None) -> Exercise | None:
         async with self._uow:
             exercise = await self._uow.exercises.get_by_id(exercise_id)
             if exercise is None:

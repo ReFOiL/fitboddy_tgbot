@@ -7,6 +7,7 @@ from typing import Protocol
 
 from src.domain.entities.user_answer import UserAnswer
 from src.domain.entities.workout import WorkoutDifficulty, WorkoutTemplate
+from src.domain.entities.equipment import Equipment
 from src.shared.utils.profile_answers import AnswerLookup, AnswerLookupMixin
 
 logger = structlog.get_logger()
@@ -60,7 +61,7 @@ class WorkoutMatcher:
             for t in templates
             if (t.goal == goal_value)
             and (t.difficulty == desired_difficulty)
-            and self._equipment_ok(t.equipment, equipment_values)
+            and self._equipment_ok(t.required_equipment, equipment_values)
             and getattr(t, "is_active", True)
         ]
         if not filtered:
@@ -134,13 +135,14 @@ class WorkoutMatcher:
         }
         return mapping.get(level, WorkoutDifficulty.MEDIUM)
 
-    def _equipment_ok(self, template_equipment: str | None, user_equipment: set[str]) -> bool:
+    def _equipment_ok(self, template_equipment: list[Equipment], user_equipment: set[str]) -> bool:
         # Если шаблон не требует оборудования — подходит всем
-        if template_equipment in {None, "", "none"}:
+        if not template_equipment:
             return True
         # Если у пользователя не заполнено — считаем, что нет
         if not user_equipment:
             return False
-        # "none" означает "без оборудования", но не заменяет гантели/штангу
-        return template_equipment in user_equipment
+        # Проверяем, что все требуемое оборудование есть у пользователя
+        template_equipment_names = {eq.name for eq in template_equipment}
+        return template_equipment_names.issubset(user_equipment | {"none"})
 

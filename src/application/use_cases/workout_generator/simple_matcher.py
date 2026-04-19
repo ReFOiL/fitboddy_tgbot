@@ -43,13 +43,24 @@ class SimpleWorkoutMatcher:
         filtered = [t for t in templates if t.goal == goal_value]
         if fitness_value == "beginner":
             filtered = [t for t in filtered if t.difficulty == WorkoutDifficulty.LOW]
+        
+        # Фильтр по месту тренировок (home-friendly)
         if location_value == "home":
-            filtered = [t for t in filtered if t.equipment in {"dumbbells", "resistance_bands", "none", None}]
-        if equipment_values:
+            # Разрешаем только шаблоны без оборудования или с домашним оборудованием
             filtered = [
-                t
-                for t in filtered
-                if (t.equipment in equipment_values) or (t.equipment is None and "none" in equipment_values)
+                t for t in filtered
+                if not t.required_equipment or all(eq.is_home_friendly for eq in t.required_equipment)
+            ]
+        
+        # Фильтр по оборудованию пользователя
+        if equipment_values:
+            # Получаем имена оборудования из required_equipment
+            filtered = [
+                t for t in filtered
+                if not t.required_equipment or all(
+                    eq.name in equipment_values or eq.name == "none"
+                    for eq in t.required_equipment
+                )
             ]
 
         if not filtered:

@@ -1,8 +1,15 @@
 """Админ-сервис: CRUD справочника противопоказаний."""
 from __future__ import annotations
 
+from typing import TypedDict
+
 from src.application.interfaces.repositories import UnitOfWork
 from src.domain.entities.contraindication import Contraindication
+
+
+class ContraindicationUpdates(TypedDict, total=False):
+    name: str
+    sort_order: int
 
 
 class ContraindicationAdminService:
@@ -28,7 +35,7 @@ class ContraindicationAdminService:
             await self._uow.commit()
         return contra
 
-    async def update(self, contraindication_id: int, **kwargs: object) -> Contraindication | None:
+    async def update(self, contraindication_id: int, **kwargs: str | int) -> Contraindication | None:
         async with self._uow:
             contra = await self._uow.contraindications.get_by_id(contraindication_id)
             if contra is None:

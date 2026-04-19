@@ -8,9 +8,11 @@ from src.application.services.exercise_admin import ExerciseAdminService
 from src.application.services.muscle_admin import MuscleAdminService
 from src.application.services.contraindication_admin import ContraindicationAdminService
 from src.application.services.workout_template_admin import WorkoutTemplateAdminService
+from src.application.services.equipment_admin import EquipmentAdminService
 from src.application.services.notification import NotificationService
 from src.application.services.profile_completion import ProfileCompletionService
 from src.application.services.questionnaire import QuestionnaireService
+from src.application.factories.answer_builder_factory import AnswerBuilderFactory
 from src.application.services.questionnaire_answers import QuestionnaireAnswerService
 from src.application.services.questionnaire_flow_queries import QuestionnaireFlowQueries
 from src.application.services.user_registration import UserRegistrationService
@@ -35,7 +37,7 @@ from src.domain.questionnaire import (
     TextAnswerStrategy,
 )
 from src.domain.value_objects.questionnaire import AnswerType
-from src.application.services.subscription import SubscriptionService
+from src.application.services.subscription import PremiumAccess, SubscriptionService
 from src.application.services.value_casting import LenientCaster
 from src.application.use_cases.payment.cryptobot import CryptoBotPaymentUseCase
 from src.application.use_cases.workout_generator.simple_matcher import SimpleWorkoutMatcher
@@ -59,6 +61,7 @@ from src.presentation.web_admin.exercise_controller import ExerciseController
 from src.presentation.web_admin.muscle_controller import MuscleController
 from src.presentation.web_admin.contraindication_controller import ContraindicationController
 from src.presentation.web_admin.workout_template_controller import WorkoutTemplateController
+from src.presentation.web_admin.equipment_controller import EquipmentController
 from src.shared.utils.profile_answers import AnswerLookup
 from src.infrastructure.cache.redis_repository import RedisCache
 from src.infrastructure.database.session import create_engine, create_session_factory
@@ -79,49 +82,51 @@ class Container(containers.DeclarativeContainer):
     questionnaire_flow: providers.Provider[QuestionnaireFlow]
     workouts_flow: providers.Provider[WorkoutsFlow]
     user_controller: providers.Provider[UserController]
+    premium_access: providers.Provider[PremiumAccess]
     wiring_config = containers.WiringConfiguration(
         packages=["src.presentation.telegram_bot.handlers", "src.presentation.web_admin"]
     )
 
     settings = providers.Singleton(get_settings)
 
-    engine = providers.Singleton(create_engine)
+    engine = providers.Singleton(create_engine, database_url=settings.provided.database.url)
     session_factory = providers.Singleton(create_session_factory, engine=engine)
     uow = providers.Factory(SQLAlchemyUnitOfWork, session_factory=session_factory)
 
-    bot = providers.Singleton(Bot, token=providers.Callable(lambda: get_settings().bot.token))
-    redis = providers.Singleton(Redis.from_url, url=providers.Callable(lambda: get_settings().redis.url))
+    bot = providers.Singleton(Bot, token=settings.provided.bot.token)
+    redis = providers.Singleton(Redis.from_url, url=settings.provided.redis.url)
     cache = providers.Factory(RedisCache, client=redis)
 
     cryptobot_client = providers.Singleton(
         CryptoBotClient,
-        api_token=providers.Callable(lambda: get_settings().cryptobot.api_token),
-        webhook_secret=providers.Callable(lambda: get_settings().cryptobot.webhook_secret),
+        api_token=settings.provided.cryptobot.api_token,
+        webhook_secret=settings.provided.cryptobot.webhook_secret,
     )
     minio_storage = providers.Singleton(
         MinioStorage,
-        endpoint=providers.Callable(lambda: get_settings().minio.endpoint),
-        access_key=providers.Callable(lambda: get_settings().minio.access_key),
-        secret_key=providers.Callable(lambda: get_settings().minio.secret_key),
-        secure=providers.Callable(lambda: get_settings().minio.secure),
+        endpoint=settings.provided.minio.endpoint,
+        access_key=settings.provided.minio.access_key,
+        secret_key=settings.provided.minio.secret_key,
+        secure=settings.provided.minio.secure,
     )
     minio_client = providers.Singleton(
         MinioClient,
-        endpoint=providers.Callable(lambda: get_settings().minio.endpoint),
-        access_key=providers.Callable(lambda: get_settings().minio.access_key),
-        secret_key=providers.Callable(lambda: get_settings().minio.secret_key),
-        secure=providers.Callable(lambda: get_settings().minio.secure),
-        presigned_endpoint=providers.Callable(lambda: get_settings().minio.public_endpoint),
+        endpoint=settings.provided.minio.endpoint,
+        access_key=settings.provided.minio.access_key,
+        secret_key=settings.provided.minio.secret_key,
+        secure=settings.provided.minio.secure,
+        presigned_endpoint=settings.provided.minio.public_endpoint,
     )
     video_file_storage = providers.Singleton(
         VideoFileStorage,
         client=minio_client,
-        bucket=providers.Callable(lambda: get_settings().minio.bucket),
+        bucket=settings.provided.minio.bucket,
     )
 
     notifier = providers.Factory(TelegramNotifier, bot=bot)
     notification_service = providers.Factory(NotificationService, notifier=notifier)
     subscription_service = providers.Factory(SubscriptionService)
+    premium_access = providers.Singleton(PremiumAccess, _settings=settings)
 
     payment_use_case = providers.Factory(
         CryptoBotPaymentUseCase,
@@ -196,11 +201,13 @@ class Container(containers.DeclarativeContainer):
         pipeline=answer_validation_pipeline,
     )
     question_factory = providers.Factory(QuestionFactory)
+    answer_builder_factory = providers.Factory(AnswerBuilderFactory)
     questionnaire_service = providers.Factory(
         QuestionnaireService,
         uow=uow,
         validator=answer_validator,
         factory=question_factory,
+        answer_builder_factory=answer_builder_factory,
     )
     questionnaire_flow_queries = providers.Factory(
         QuestionnaireFlowQueries,
@@ -262,6 +269,7 @@ class Container(containers.DeclarativeContainer):
     exercise_admin_service = providers.Factory(ExerciseAdminService, uow=uow)
     muscle_admin_service = providers.Factory(MuscleAdminService, uow=uow)
     contraindication_admin_service = providers.Factory(ContraindicationAdminService, uow=uow)
+    equipment_admin_service = providers.Factory(EquipmentAdminService, uow=uow)
     workout_template_admin_service = providers.Factory(
         WorkoutTemplateAdminService,
         uow=uow,
@@ -282,5 +290,9 @@ class Container(containers.DeclarativeContainer):
     workout_template_controller = providers.Factory(
         WorkoutTemplateController,
         service=workout_template_admin_service,
+    )
+    equipment_controller = providers.Factory(
+        EquipmentController,
+        service=equipment_admin_service,
     )
 

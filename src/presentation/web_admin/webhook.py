@@ -3,6 +3,7 @@ from dependency_injector.wiring import Provide, inject
 
 from src.application.use_cases.payment.cryptobot import CryptoBotPaymentUseCase
 from src.infrastructure.external.cryptobot.client import CryptoBotClient
+from src.shared.config.settings import get_settings
 from src.shared.di.containers import Container
 
 
@@ -17,6 +18,8 @@ async def cryptobot_webhook(
     payment_use_case: CryptoBotPaymentUseCase = Depends(Provide[Container.payment_use_case]),
     client: CryptoBotClient = Depends(Provide[Container.cryptobot_client]),
 ) -> dict:
+    if not get_settings().feature_payment_enabled:
+        return {"ok": True}
     body = await request.body()
     if not signature or not await client.verify_webhook(body, signature):
         return {"ok": False}

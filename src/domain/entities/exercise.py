@@ -46,23 +46,23 @@ class Exercise(Base):
         onupdate=func.now(),
     )
 
-    muscles: Mapped[list["Muscle"]] = relationship(
+    muscles: Mapped[list[Muscle]] = relationship(
         "Muscle",
         secondary=exercise_muscles,
         back_populates="exercises",
         lazy="selectin",
     )
-    contraindications: Mapped[list["Contraindication"]] = relationship(
+    contraindications: Mapped[list[Contraindication]] = relationship(
         "Contraindication",
         secondary=exercise_contraindications,
         back_populates="exercises",
         lazy="selectin",
     )
-    workout_exercises: Mapped[list["WorkoutExercise"]] = relationship(
+    workout_exercises: Mapped[list[WorkoutExercise]] = relationship(
         back_populates="exercise",
         cascade="all, delete-orphan",
     )
-    workout_templates: Mapped[list["WorkoutTemplate"]] = relationship(
+    workout_templates: Mapped[list[WorkoutTemplate]] = relationship(
         secondary="workout_exercises",
         viewonly=True,
         back_populates="exercises",

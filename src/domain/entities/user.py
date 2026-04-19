@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import enum
 
-from sqlalchemy import Boolean, DateTime, Enum, Float, String
+from sqlalchemy import Boolean, DateTime, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.entities.base import Base
@@ -30,12 +30,15 @@ class User(Base):
     cached_tdee: Mapped[float | None] = mapped_column(Float, nullable=True)
     cached_bmi: Mapped[float | None] = mapped_column(Float, nullable=True)
 
-    workouts: Mapped[list["WorkoutTemplate"]] = relationship(back_populates="user")
-    training_plans: Mapped[list["TrainingPlan"]] = relationship(
+    # Все данные профиля (gender, equipment, goal, level и т.д.) хранятся в UserAnswer
+    # Это единственный источник истины - никакой денормализации!
+
+    workouts: Mapped[list[WorkoutTemplate]] = relationship(back_populates="user")
+    training_plans: Mapped[list[TrainingPlan]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
     )
-    answers: Mapped[list["UserAnswer"]] = relationship(
+    answers: Mapped[list[UserAnswer]] = relationship(
         cascade="all, delete-orphan",
         back_populates="user",
     )

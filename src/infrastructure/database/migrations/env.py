@@ -5,10 +5,9 @@ import os
 import sys
 from logging.config import fileConfig
 from pathlib import Path
-from typing import Any
-
 from alembic import context
 from sqlalchemy import pool
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 for parent in Path(__file__).resolve().parents:
@@ -62,7 +61,7 @@ async def run_migrations_online() -> None:
     )
 
     async with connectable.connect() as connection:
-        def do_run_migrations(sync_conn: Any) -> None:
+        def do_run_migrations(sync_conn: Connection) -> None:
             context.configure(
                 connection=sync_conn,
                 target_metadata=target_metadata,

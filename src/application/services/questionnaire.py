@@ -1,10 +1,9 @@
 from __future__ import annotations
 
+from src.application.factories.answer_builder_factory import AnswerBuilderFactory
 from src.application.interfaces.repositories import UnitOfWork
-from src.domain.entities.questionnaire import CustomQuestion
 from src.domain.entities.user_answer import UserAnswer
 from src.domain.questionnaire import AnswerValidator, Question, QuestionFactory
-from src.domain.value_objects.questionnaire import AnswerType
 
 
 class QuestionnaireService:
@@ -13,10 +12,12 @@ class QuestionnaireService:
         uow: UnitOfWork,
         validator: AnswerValidator | None = None,
         factory: QuestionFactory | None = None,
+        answer_builder_factory: AnswerBuilderFactory | None = None,
     ) -> None:
         self.uow = uow
         self._validator = validator or AnswerValidator()
         self._factory = factory or QuestionFactory()
+        self._answer_builder_factory = answer_builder_factory or AnswerBuilderFactory()
 
     async def get_next_question(
         self,
@@ -45,13 +46,23 @@ class QuestionnaireService:
 
     async def save_answer(self, user_id: int, question_key: str, value: str | int | bool | list[str] | None) -> None:
         async with self.uow:
+            user = await self.uow.users.get_by_id(user_id)
+            if user is None:
+                raise ValueError("User not found")
+            
+            # Все вопросы (системные и кастомные) сохраняем в UserAnswer
             question = await self.uow.custom_questions.get_by_key(question_key)
             if question is None:
                 raise ValueError("Question not found")
+            
             await self.uow.user_answers.delete_by_question(user_id, question.id)
-            answers = self._build_answers(user_id, question, value)
+            answers = self._answer_builder_factory.build_answers(user_id, question, value)
             if answers:
                 await self.uow.user_answers.add_many(answers)
+            
+            # Все данные профиля хранятся только в UserAnswer - единый источник истины!
+            # Никакой синхронизации не требуется.
+            
             await self.uow.commit()
 
     def validate_answer(
@@ -60,31 +71,3 @@ class QuestionnaireService:
         text: str,
     ) -> tuple[str | int | bool | list[str] | None, str | None]:
         return self._validator.validate(question, text)
-
-    def _build_answers(
-        self,
-        user_id: int,
-        question: CustomQuestion,
-        value: str | int | bool | list[str] | None,
-    ) -> list[UserAnswer]:
-        if value is None:
-            return []
-        if question.answer_type in {AnswerType.SINGLE_CHOICE, AnswerType.MULTIPLE_CHOICE}:
-            options_by_value = {opt.value: opt.id for opt in question.options}
-            if question.answer_type == AnswerType.MULTIPLE_CHOICE:
-                if not isinstance(value, list):
-                    return []
-                answers: list[UserAnswer] = []
-                for item in value:
-                    option_id = options_by_value.get(str(item))
-                    if option_id is None:
-                        continue
-                    answers.append(
-                        UserAnswer(user_id=user_id, question_id=question.id, option_id=option_id)
-                    )
-                return answers
-            option_id = options_by_value.get(str(value))
-            if option_id is None:
-                return []
-            return [UserAnswer(user_id=user_id, question_id=question.id, option_id=option_id)]
-        return [UserAnswer(user_id=user_id, question_id=question.id, value=value)]

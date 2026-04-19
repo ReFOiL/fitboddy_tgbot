@@ -1,5 +1,7 @@
 from functools import lru_cache
-from pydantic import Field
+from typing import Self
+
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -40,8 +42,8 @@ class CryptoBotSettings(BaseSettings):
         env_file_encoding="utf-8",
         extra="ignore",
     )
-    api_token: str = Field(..., alias="CRYPTBOT_API_TOKEN")
-    webhook_secret: str = Field(..., alias="CRYPTBOT_WEBHOOK_SECRET")
+    api_token: str = Field(default="", alias="CRYPTBOT_API_TOKEN")
+    webhook_secret: str = Field(default="", alias="CRYPTBOT_WEBHOOK_SECRET")
 
 
 class MinioSettings(BaseSettings):
@@ -78,7 +80,14 @@ class ObservabilitySettings(BaseSettings):
 
 class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
         extra="ignore",
+    )
+    feature_payment_enabled: bool = Field(
+        default=True,
+        alias="FEATURE_PAYMENT_ENABLED",
+        description="Если false — оплата выключена: CRYPTBOT_* не обязательны, доступ как у PREMIUM для всех.",
     )
     bot: BotSettings = BotSettings()
     database: DatabaseSettings = DatabaseSettings()
@@ -86,6 +95,27 @@ class AppSettings(BaseSettings):
     cryptobot: CryptoBotSettings = CryptoBotSettings()
     minio: MinioSettings = MinioSettings()
     observability: ObservabilitySettings = ObservabilitySettings()
+
+    @staticmethod
+    def validate_cryptobot_requirements(
+        feature_payment_enabled: bool,
+        cryptobot: CryptoBotSettings,
+    ) -> None:
+        """Правила CRYPTBOT при включённой оплате (удобно тестировать без .env)."""
+        if feature_payment_enabled:
+            if not cryptobot.api_token.strip():
+                raise ValueError(
+                    "Задайте CRYPTBOT_API_TOKEN или отключите оплату: FEATURE_PAYMENT_ENABLED=false",
+                )
+            if not cryptobot.webhook_secret.strip():
+                raise ValueError(
+                    "Задайте CRYPTBOT_WEBHOOK_SECRET или отключите оплату: FEATURE_PAYMENT_ENABLED=false",
+                )
+
+    @model_validator(mode="after")
+    def _require_cryptobot_when_payments_on(self) -> Self:
+        self.validate_cryptobot_requirements(self.feature_payment_enabled, self.cryptobot)
+        return self
 
 
 @lru_cache(maxsize=1)

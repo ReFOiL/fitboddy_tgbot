@@ -12,6 +12,8 @@ from src.presentation.web_admin.question_schemas import (
     MessageOut,
     QuestionCreatedOut,
     QuestionOrderUpdate,
+    ScoringWeightCreate,
+    ScoringWeightOut,
 )
 from src.shared.di.containers import Container
 
@@ -79,3 +81,35 @@ async def link_question_to_template(
     controller: QuestionController = Depends(Provide[Container.question_controller]),
 ) -> MessageOut:
     return (await controller.link_template(question_id, template_id)).unwrap()
+
+
+@router.get("/admin/questions/{question_id}/scoring-weights", response_model=list[ScoringWeightOut])
+@inject
+async def list_scoring_weights(
+    question_id: int,
+    _admin: str = Depends(get_current_admin),
+    controller: QuestionController = Depends(Provide[Container.question_controller]),
+) -> list[ScoringWeightOut]:
+    return (await controller.list_scoring_weights(question_id)).unwrap()
+
+
+@router.post("/admin/questions/{question_id}/scoring-weights", response_model=ScoringWeightOut)
+@inject
+async def create_or_update_scoring_weight(
+    question_id: int,
+    data: ScoringWeightCreate,
+    _admin: str = Depends(get_current_admin),
+    controller: QuestionController = Depends(Provide[Container.question_controller]),
+) -> ScoringWeightOut:
+    return (await controller.create_or_update_scoring_weight(question_id, data)).unwrap()
+
+
+@router.delete("/admin/questions/{question_id}/scoring-weights/{answer_value}", response_model=MessageOut)
+@inject
+async def delete_scoring_weight(
+    question_id: int,
+    answer_value: str,
+    _admin: str = Depends(get_current_admin),
+    controller: QuestionController = Depends(Provide[Container.question_controller]),
+) -> MessageOut:
+    return (await controller.delete_scoring_weight(question_id, answer_value)).unwrap()

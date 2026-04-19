@@ -1,8 +1,15 @@
 """Админ-сервис: CRUD справочника мышечных групп."""
 from __future__ import annotations
 
+from typing import TypedDict
+
 from src.application.interfaces.repositories import UnitOfWork
 from src.domain.entities.muscle import Muscle
+
+
+class MuscleUpdates(TypedDict, total=False):
+    name: str
+    sort_order: int
 
 
 class MuscleAdminService:
@@ -28,7 +35,7 @@ class MuscleAdminService:
             await self._uow.commit()
         return muscle
 
-    async def update(self, muscle_id: int, **kwargs: object) -> Muscle | None:
+    async def update(self, muscle_id: int, **kwargs: str | int) -> Muscle | None:
         async with self._uow:
             muscle = await self._uow.muscles.get_by_id(muscle_id)
             if muscle is None:

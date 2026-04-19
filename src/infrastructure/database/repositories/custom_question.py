@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import selectinload
 
 from src.application.interfaces.repositories import ICustomQuestionRepository
-from src.domain.entities.questionnaire import CustomQuestion
+from src.domain.entities.questionnaire import CustomQuestion, CustomQuestionScoringWeight
 from src.infrastructure.database.repositories.base import SQLAlchemyRepository
 
 
@@ -34,7 +34,10 @@ class CustomQuestionRepository(SQLAlchemyRepository, ICustomQuestionRepository):
         result = await self._session.execute(
             select(CustomQuestion)
             .where(CustomQuestion.id == question_id)
-            .options(selectinload(CustomQuestion.options))
+            .options(
+                selectinload(CustomQuestion.options),
+                selectinload(CustomQuestion.scoring_weights),
+            )
         )
         return result.scalar_one_or_none()
 
@@ -48,3 +51,15 @@ class CustomQuestionRepository(SQLAlchemyRepository, ICustomQuestionRepository):
 
     async def add(self, question: CustomQuestion) -> None:
         self._session.add(question)
+
+    async def get_scoring_weight(self, question_id: int, answer_value: str) -> int | None:
+        """Получить вес для конкретного ответа на вопрос."""
+        result = await self._session.execute(
+            select(CustomQuestionScoringWeight.weight)
+            .where(
+                CustomQuestionScoringWeight.question_id == question_id,
+                CustomQuestionScoringWeight.answer_value == answer_value,
+            )
+        )
+        weight = result.scalar_one_or_none()
+        return weight

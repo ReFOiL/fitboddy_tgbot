@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field, ConfigDict
 
 from src.domain.entities.training_plan import TrainingPlanStatus
 from src.domain.entities.workout import WorkoutDifficulty
+import enum
 
 
 class MessageOut(BaseModel):
@@ -117,28 +118,49 @@ class WorkoutExerciseOut(BaseModel):
     exercise: ExerciseOut
 
 
+class WorkoutCategory(str, enum.Enum):
+    """Категории тренировок."""
+    FULL_BODY = "full_body"
+    UPPER = "upper"
+    LOWER = "lower"
+    PUSH = "push"
+    PULL = "pull"
+    LEGS = "legs"
+    CARDIO = "cardio"
+
+
 class WorkoutTemplateCreate(BaseModel):
     title: str = Field(..., max_length=128)
     goal: str = Field(..., max_length=32)
     difficulty: WorkoutDifficulty
-    equipment: str | None = Field(default=None, max_length=128)
     days_per_week: int = Field(default=3, ge=1, le=7)
     description: str | None = Field(default=None, max_length=1000)
     is_active: bool = True
     user_id: int | None = None
     exercises: list[WorkoutExerciseCreate] = Field(default_factory=list)
+    # Новые поля
+    required_equipment_ids: list[int] = Field(default_factory=list)
+    intensity_factor: float = Field(default=1.0, ge=0.1, le=5.0)
+    workout_category: WorkoutCategory = WorkoutCategory.FULL_BODY
+    min_age: int | None = Field(default=None, ge=0, le=150)
+    max_age: int | None = Field(default=None, ge=0, le=150)
 
 
 class WorkoutTemplateUpdate(BaseModel):
     title: str | None = Field(default=None, max_length=128)
     goal: str | None = Field(default=None, max_length=32)
     difficulty: WorkoutDifficulty | None = None
-    equipment: str | None = Field(default=None, max_length=128)
     days_per_week: int | None = Field(default=None, ge=1, le=7)
     description: str | None = Field(default=None, max_length=1000)
     is_active: bool | None = None
     user_id: int | None = None
     exercises: list[WorkoutExerciseCreate] | None = None
+    # Новые поля
+    required_equipment_ids: list[int] | None = None
+    intensity_factor: float | None = Field(default=None, ge=0.1, le=5.0)
+    workout_category: WorkoutCategory | None = None
+    min_age: int | None = Field(default=None, ge=0, le=150)
+    max_age: int | None = Field(default=None, ge=0, le=150)
 
 
 class WorkoutExercisesOrderUpdate(BaseModel):
@@ -152,15 +174,25 @@ class WorkoutTemplateOut(BaseModel):
     title: str
     goal: str
     difficulty: WorkoutDifficulty
-    equipment: str | None
     days_per_week: int
     user_id: int | None
     description: str | None
     is_active: bool
     created_at: datetime
     updated_at: datetime
+    # Новые поля
+    intensity_factor: float
+    workout_category: str
+    min_age: int | None
+    max_age: int | None
 
     workout_exercises: list[WorkoutExerciseOut] = Field(default_factory=list)
+    # Новые связи (будут заполняться через контроллер)
+    required_equipment: list["EquipmentOut"] = Field(default_factory=list)
+
+
+# Forward references для EquipmentOut
+from src.presentation.web_admin.equipment_schemas import EquipmentOut  # noqa: E402
 
 
 class TrainingPlanCreate(BaseModel):

@@ -26,7 +26,7 @@ class QuestionPayloadBuilder(BaseController):
         super().__init__()
         self._normalizer = normalizer
 
-    def build_create(self, data: CustomQuestionCreate) -> ControllerResult[dict[str, object]]:
+    def build_create(self, data: CustomQuestionCreate) -> ControllerResult[dict[str, str | int | float | bool | None | list[dict[str, str]]]]:
         key_result = self._ensure_key(data.key)
         if not key_result.ok:
             return key_result
@@ -35,7 +35,7 @@ class QuestionPayloadBuilder(BaseController):
         payload["options"] = self._normalizer.normalize(data.options)
         return self.ok(payload)
 
-    def build_update(self, data: CustomQuestionUpdate) -> ControllerResult[dict[str, object]]:
+    def build_update(self, data: CustomQuestionUpdate) -> ControllerResult[dict[str, str | int | float | bool | None | list[dict[str, str]]]]:
         updates = data.model_dump(exclude_unset=True)
         if "key" in updates:
             key_result = self._ensure_key(updates["key"])
@@ -54,6 +54,7 @@ class QuestionPayloadBuilder(BaseController):
 
 class QuestionPresenter:
     def to_out(self, question: CustomQuestion) -> CustomQuestionOut:
+        is_system = bool(question.is_system or (question.key or "").startswith("system:"))
         return CustomQuestionOut(
             id=question.id,
             key=question.key,
@@ -66,6 +67,7 @@ class QuestionPresenter:
             pattern=question.pattern,
             is_required=question.is_required,
             is_active=question.is_active,
+            is_system=is_system,
             category=question.category,
             tags=question.tags,
             created_at=question.created_at,

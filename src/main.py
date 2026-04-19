@@ -46,7 +46,7 @@ async def _run_bot() -> None:
 
     stop_event = asyncio.Event()
 
-    def _stop(*_args: object) -> None:
+    def _stop() -> None:
         stop_event.set()
 
     loop = asyncio.get_running_loop()

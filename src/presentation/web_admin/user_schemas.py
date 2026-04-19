@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
 
 from pydantic import BaseModel
 
@@ -26,7 +25,7 @@ class AnswerGroupOut(BaseModel):
     question_text: str
     answer_type: str
     options: list[OptionOut] | None = None
-    value: Any | None = None
+    value: str | int | bool | list[str] | None = None
     answered_at: datetime | None = None
     updated_at: datetime | None = None
 

@@ -16,6 +16,8 @@ from src.infrastructure.database.repositories.user_answer import UserAnswerRepos
 from src.infrastructure.database.repositories.workout import WorkoutTemplateRepository
 from src.infrastructure.database.repositories.training_plan import TrainingPlanRepository
 from src.infrastructure.database.repositories.scheduled_workout import ScheduledWorkoutRepository
+from src.infrastructure.database.repositories.equipment import EquipmentRepository
+from src.domain.entities.base import Base
 
 
 class SQLAlchemyUnitOfWork(UnitOfWork):
@@ -36,6 +38,8 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
         self.custom_questions = CustomQuestionRepository(self._session)
         self.user_answers = UserAnswerRepository(self._session)
         self.question_template_links = QuestionTemplateLinkRepository(self._session)
+        self.equipment = EquipmentRepository(self._session)
+        # Gender модель удалена - пол хранится как строка в workout_template_allowed_genders
         return self
 
     async def __aexit__(
@@ -62,7 +66,7 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
         if self._session:
             await self._session.rollback()
 
-    async def refresh(self, entity: object) -> None:
+    async def refresh(self, entity: Base) -> None:
         if self._session:
             await self._session.refresh(entity)
 

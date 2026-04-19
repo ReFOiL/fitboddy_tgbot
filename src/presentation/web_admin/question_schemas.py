@@ -54,6 +54,7 @@ class CustomQuestionOut(BaseModel):
     pattern: str | None = None
     is_required: bool
     is_active: bool
+    is_system: bool
     category: str | None = None
     tags: list[str]
     created_at: datetime
@@ -70,3 +71,18 @@ class MessageOut(BaseModel):
 
 class QuestionCreatedOut(MessageOut):
     id: int
+
+
+# --- Scoring Weights ---
+class ScoringWeightOut(BaseModel):
+    id: int
+    question_id: int
+    answer_value: str
+    weight: int
+    created_at: datetime
+    updated_at: datetime
+
+
+class ScoringWeightCreate(BaseModel):
+    answer_value: str = Field(..., max_length=255)
+    weight: int = Field(..., description="Weight can be positive or negative")

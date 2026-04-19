@@ -18,6 +18,19 @@ class ExerciseLink(TypedDict, total=False):
     notes: str | None
 
 
+class WorkoutTemplateScalarUpdates(TypedDict, total=False):
+    title: str
+    goal: str
+    difficulty: WorkoutDifficulty
+    days_per_week: int
+    description: str | None
+    is_active: bool
+    intensity_factor: float
+    workout_category: str
+    min_age: int | None
+    max_age: int | None
+
+
 class WorkoutTemplateAdminService:
     def __init__(self, uow: UnitOfWork) -> None:
         self._uow = uow
@@ -36,26 +49,42 @@ class WorkoutTemplateAdminService:
         title: str,
         goal: str,
         difficulty: WorkoutDifficulty,
-        equipment: str | None = None,
         days_per_week: int = 3,
         description: str | None = None,
         is_active: bool = True,
         user_id: int | None = None,
         exercises: list[ExerciseLink] | None = None,
+        # Новые поля
+        required_equipment_ids: list[int] | None = None,
+        intensity_factor: float = 1.0,
+        workout_category: str = "full_body",
+        min_age: int | None = None,
+        max_age: int | None = None,
     ) -> WorkoutTemplate:
         async with self._uow:
             template = WorkoutTemplate(
                 title=title,
                 goal=goal,
                 difficulty=difficulty,
-                equipment=equipment,
                 days_per_week=days_per_week,
                 description=description,
                 is_active=is_active,
                 user_id=user_id,
+                intensity_factor=intensity_factor,
+                workout_category=workout_category,
+                min_age=min_age,
+                max_age=max_age,
             )
             await self._uow.workouts.add(template)
             await self._uow.flush()
+            
+            # Устанавливаем связи с оборудованием
+            if required_equipment_ids:
+                for eq_id in required_equipment_ids:
+                    equipment_obj = await self._uow.equipment.get_by_id(eq_id)
+                    if equipment_obj:
+                        template.required_equipment.append(equipment_obj)
+            
             if exercises:
                 for link in exercises:
                     ex_id = link["exercise_id"]
@@ -82,15 +111,25 @@ class WorkoutTemplateAdminService:
         template_id: int,
         *,
         exercises: list[ExerciseLink] | None = None,
-        **scalar_updates: object,
+        required_equipment_ids: list[int] | None = None,
+        **scalar_updates: str | int | float | bool | WorkoutDifficulty | None,
     ) -> WorkoutTemplate | None:
         async with self._uow:
             template = await self._uow.workouts.get_by_id(template_id)
             if template is None:
                 return None
             for key, value in scalar_updates.items():
-                if hasattr(template, key):
+                if hasattr(template, key) and value is not None:
                     setattr(template, key, value)
+            
+            # Обновляем связи с оборудованием
+            if required_equipment_ids is not None:
+                template.required_equipment.clear()
+                for eq_id in required_equipment_ids:
+                    equipment_obj = await self._uow.equipment.get_by_id(eq_id)
+                    if equipment_obj:
+                        template.required_equipment.append(equipment_obj)
+            
             if exercises is not None:
                 template.workout_exercises.clear()
                 for link in exercises:

@@ -6,13 +6,13 @@ from dataclasses import dataclass
 @dataclass(slots=True)
 class ValidationResult:
     ok: bool
-    value: object | None = None
+    value: str | int | float | bool | None = None
     error: str | None = None
     code: str | None = None
 
 
     @classmethod
-    def success(cls, value: object | None) -> "ValidationResult":
+    def success(cls, value: str | int | float | bool | None) -> "ValidationResult":
         return cls(ok=True, value=value, error=None, code=None)
 
     @classmethod
