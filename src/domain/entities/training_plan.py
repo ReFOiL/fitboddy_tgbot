@@ -4,14 +4,13 @@ import enum
 from datetime import date, datetime
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Enum, Float, ForeignKey, Index, Integer, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.entities.base import Base
 
 if TYPE_CHECKING:
     from src.domain.entities.user import User
-    from src.domain.entities.workout import WorkoutTemplate
 
 
 class TrainingPlanStatus(enum.Enum):
@@ -37,14 +36,12 @@ class TrainingPlan(Base):
     status: Mapped[TrainingPlanStatus] = mapped_column(
         Enum(TrainingPlanStatus, name="trainingplanstatus"),
         default=TrainingPlanStatus.ACTIVE,
-        index=True,  # Индекс для фильтрации по статусу
+        index=True,
     )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     __table_args__ = (
-        # Составной индекс для быстрого поиска активных планов пользователя
         Index("idx_training_plan_user_status", "user_id", "status"),
-        # CHECK: start_date <= end_date
         CheckConstraint(
             "start_date <= end_date",
             name="ck_training_plan_date_range",
@@ -60,20 +57,13 @@ class TrainingPlan(Base):
 
 
 class ScheduledWorkout(Base):
-    """
-    Конкретная тренировка в конкретный день (инстанс шаблона).
-    """
+    """Конкретная тренировка в конкретный день (строки в `session_exercises`)."""
 
     __tablename__ = "scheduled_workouts"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     plan_id: Mapped[int] = mapped_column(
         ForeignKey("training_plans.id", ondelete="CASCADE"),
-        index=True,
-    )
-    template_id: Mapped[int | None] = mapped_column(
-        ForeignKey("workout_templates.id", ondelete="SET NULL"),
-        nullable=True,
         index=True,
     )
     scheduled_for: Mapped[date] = mapped_column(Date, index=True)
@@ -84,25 +74,25 @@ class ScheduledWorkout(Base):
         doc="0=Mon .. 6=Sun",
     )
     volume_multiplier: Mapped[float] = mapped_column(Float, default=1.0)
-    is_completed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)  # Индекс для фильтрации завершенных
+    is_completed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    perceived_effort: Mapped[str | None] = mapped_column(
+        String(16),
+        nullable=True,
+        doc="После тренировки: easy | ok | hard",
+    )
 
     __table_args__ = (
-        # Составной индекс для быстрого поиска тренировок по плану и дате
         Index("idx_scheduled_workout_plan_date", "plan_id", "scheduled_for"),
-        # Уникальность: одна тренировка на план в конкретный день
         UniqueConstraint("plan_id", "scheduled_for", name="uq_scheduled_workout_plan_date"),
-        # CHECK: day_of_week в диапазоне 0-6
         CheckConstraint(
             "(day_of_week IS NULL) OR (day_of_week >= 0 AND day_of_week <= 6)",
             name="ck_scheduled_workout_day_of_week",
         ),
-        # CHECK: volume_multiplier > 0
         CheckConstraint(
             "volume_multiplier > 0",
             name="ck_scheduled_workout_volume_positive",
         ),
-        # CHECK: completed_at заполнен только если is_completed = true
         CheckConstraint(
             "(is_completed = false) OR (completed_at IS NOT NULL)",
             name="ck_scheduled_workout_completed",
@@ -110,5 +100,35 @@ class ScheduledWorkout(Base):
     )
 
     plan: Mapped[TrainingPlan] = relationship(back_populates="scheduled_workouts")
-    template: Mapped[WorkoutTemplate | None] = relationship(back_populates="scheduled_workouts")
+    session_exercises: Mapped[list["ScheduledWorkoutExercise"]] = relationship(
+        back_populates="scheduled_workout",
+        cascade="all, delete-orphan",
+        order_by="ScheduledWorkoutExercise.sort_order",
+    )
 
+
+class ScheduledWorkoutExercise(Base):
+    """Снимок упражнений на конкретную дату."""
+
+    __tablename__ = "scheduled_workout_exercises"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    scheduled_workout_id: Mapped[int] = mapped_column(
+        ForeignKey("scheduled_workouts.id", ondelete="CASCADE"),
+        index=True,
+    )
+    exercise_id: Mapped[int] = mapped_column(
+        ForeignKey("exercises.id", ondelete="CASCADE"),
+        index=True,
+    )
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    sets: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    reps: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    rest_seconds: Mapped[int | None] = mapped_column(Integer, nullable=True)
+
+    scheduled_workout: Mapped[ScheduledWorkout] = relationship(back_populates="session_exercises")
+    exercise: Mapped["Exercise"] = relationship("Exercise")
+
+
+from src.domain.entities.exercise import Exercise  # noqa: E402  # isort:skip

@@ -72,17 +72,6 @@ async def update_question_order(
     return (await controller.update_order(question_id, order_data)).unwrap()
 
 
-@router.post("/admin/questions/{question_id}/link-template/{template_id}", response_model=MessageOut)
-@inject
-async def link_question_to_template(
-    question_id: int,
-    template_id: int,
-    _admin: AdminPrincipal = Depends(get_current_admin),
-    controller: QuestionController = Depends(Provide[Container.question_controller]),
-) -> MessageOut:
-    return (await controller.link_template(question_id, template_id)).unwrap()
-
-
 @router.get("/admin/questions/{question_id}/scoring-weights", response_model=list[ScoringWeightOut])
 @inject
 async def list_scoring_weights(

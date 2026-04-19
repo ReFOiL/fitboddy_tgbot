@@ -6,7 +6,7 @@ from dependency_injector.wiring import Provide, inject
 
 from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.muscle_controller import MuscleController
-from src.presentation.web_admin.workout_schemas import MessageOut, MuscleCreate, MuscleOut, MuscleUpdate
+from src.presentation.web_admin.admin_schemas import MessageOut, MuscleCreate, MuscleOut, MuscleUpdate
 from src.shared.di.containers import Container
 
 router = APIRouter()

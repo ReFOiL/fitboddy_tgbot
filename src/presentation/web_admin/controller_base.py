@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from fastapi import status
 
@@ -13,14 +13,14 @@ class BaseController:
     def ok(self, data: T) -> ControllerResult[T]:
         return ControllerResult(ok=True, data=data, status_code=status.HTTP_200_OK)
 
-    def not_found(self, detail: str = "Not found") -> ControllerResult[None]:
+    def not_found(self, detail: str = "Not found") -> ControllerResult[Any]:
         return ControllerResult(
             ok=False,
             error=detail,
             status_code=status.HTTP_404_NOT_FOUND,
         )
 
-    def bad_request(self, detail: str) -> ControllerResult[None]:
+    def bad_request(self, detail: str) -> ControllerResult[Any]:
         return ControllerResult(
             ok=False,
             error=detail,

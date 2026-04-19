@@ -7,7 +7,7 @@ from dependency_injector.wiring import Provide, inject
 from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.equipment_controller import EquipmentController
 from src.presentation.web_admin.equipment_schemas import EquipmentCreate, EquipmentOut, EquipmentUpdate
-from src.presentation.web_admin.workout_schemas import MessageOut
+from src.presentation.web_admin.admin_schemas import MessageOut
 from src.shared.di.containers import Container
 
 router = APIRouter()

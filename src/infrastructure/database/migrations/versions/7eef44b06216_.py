@@ -1,15 +1,15 @@
 """empty message
 
-Revision ID: 4a1b5117e979
+Revision ID: 7eef44b06216
 Revises: 
-Create Date: 2026-04-19 13:29:16.152960
+Create Date: 2026-04-19 18:07:23.028620
 
 """
 from alembic import op
 import sqlalchemy as sa
 
 
-revision = '4a1b5117e979'
+revision = '7eef44b06216'
 down_revision = None
 branch_labels = None
 depends_on = None
@@ -82,6 +82,7 @@ def upgrade() -> None:
     sa.Column('equipment', sa.String(length=64), nullable=True),
     sa.Column('is_cardio', sa.Boolean(), nullable=False),
     sa.Column('difficulty', sa.Integer(), nullable=False),
+    sa.Column('workout_category', sa.String(length=50), nullable=False),
     sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.PrimaryKeyConstraint('id'),
@@ -167,37 +168,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_training_plans_start_date'), 'training_plans', ['start_date'], unique=False)
     op.create_index(op.f('ix_training_plans_status'), 'training_plans', ['status'], unique=False)
     op.create_index(op.f('ix_training_plans_user_id'), 'training_plans', ['user_id'], unique=False)
-    op.create_table('workout_templates',
-    sa.Column('id', sa.Integer(), nullable=False),
-    sa.Column('title', sa.String(length=128), nullable=False),
-    sa.Column('goal', sa.String(length=32), nullable=False),
-    sa.Column('difficulty', sa.Enum('LOW', 'MEDIUM', 'HIGH', name='workoutdifficulty'), nullable=False),
-    sa.Column('days_per_week', sa.Integer(), nullable=False),
-    sa.Column('user_id', sa.Integer(), nullable=True),
-    sa.Column('description', sa.String(length=1000), nullable=True),
-    sa.Column('is_active', sa.Boolean(), nullable=False),
-    sa.Column('is_global', sa.Boolean(), nullable=False),
-    sa.Column('intensity_factor', sa.Float(), nullable=False),
-    sa.Column('workout_category', sa.String(length=50), nullable=False),
-    sa.Column('min_age', sa.Integer(), nullable=True),
-    sa.Column('max_age', sa.Integer(), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.CheckConstraint('(is_global = true AND user_id IS NULL) OR (is_global = false AND user_id IS NOT NULL)', name='ck_workout_global_consistency'),
-    sa.CheckConstraint('(min_age IS NULL) OR (max_age IS NULL) OR (min_age <= max_age)', name='ck_workout_age_range'),
-    sa.CheckConstraint('days_per_week >= 1 AND days_per_week <= 7', name='ck_workout_days_per_week'),
-    sa.CheckConstraint('intensity_factor > 0', name='ck_workout_intensity_positive'),
-    sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='SET NULL'),
-    sa.PrimaryKeyConstraint('id')
-    )
-    op.create_index('idx_workout_active_goal_difficulty', 'workout_templates', ['is_active', 'goal', 'difficulty'], unique=False)
-    op.create_index('idx_workout_global_active', 'workout_templates', ['is_global', 'is_active'], unique=False)
-    op.create_index(op.f('ix_workout_templates_difficulty'), 'workout_templates', ['difficulty'], unique=False)
-    op.create_index(op.f('ix_workout_templates_goal'), 'workout_templates', ['goal'], unique=False)
-    op.create_index(op.f('ix_workout_templates_is_active'), 'workout_templates', ['is_active'], unique=False)
-    op.create_index(op.f('ix_workout_templates_is_global'), 'workout_templates', ['is_global'], unique=False)
-    op.create_index(op.f('ix_workout_templates_user_id'), 'workout_templates', ['user_id'], unique=False)
-    op.create_index(op.f('ix_workout_templates_workout_category'), 'workout_templates', ['workout_category'], unique=False)
     op.create_table('custom_question_scoring_weights',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('question_id', sa.Integer(), nullable=False),
@@ -218,28 +188,20 @@ def upgrade() -> None:
     op.create_index(op.f('ix_custom_question_scoring_weights_answer_value'), 'custom_question_scoring_weights', ['answer_value'], unique=False)
     op.create_index(op.f('ix_custom_question_scoring_weights_option_id'), 'custom_question_scoring_weights', ['option_id'], unique=False)
     op.create_index(op.f('ix_custom_question_scoring_weights_question_id'), 'custom_question_scoring_weights', ['question_id'], unique=False)
-    op.create_table('question_template_links',
-    sa.Column('question_id', sa.Integer(), nullable=False),
-    sa.Column('template_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['question_id'], ['custom_questions.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['template_id'], ['workout_templates.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('question_id', 'template_id')
-    )
     op.create_table('scheduled_workouts',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('plan_id', sa.Integer(), nullable=False),
-    sa.Column('template_id', sa.Integer(), nullable=True),
     sa.Column('scheduled_for', sa.Date(), nullable=False),
     sa.Column('week', sa.Integer(), nullable=True),
     sa.Column('day_of_week', sa.Integer(), nullable=True),
     sa.Column('volume_multiplier', sa.Float(), nullable=False),
     sa.Column('is_completed', sa.Boolean(), nullable=False),
     sa.Column('completed_at', sa.DateTime(timezone=True), nullable=True),
+    sa.Column('perceived_effort', sa.String(length=16), nullable=True),
     sa.CheckConstraint('(day_of_week IS NULL) OR (day_of_week >= 0 AND day_of_week <= 6)', name='ck_scheduled_workout_day_of_week'),
     sa.CheckConstraint('(is_completed = false) OR (completed_at IS NOT NULL)', name='ck_scheduled_workout_completed'),
     sa.CheckConstraint('volume_multiplier > 0', name='ck_scheduled_workout_volume_positive'),
     sa.ForeignKeyConstraint(['plan_id'], ['training_plans.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['template_id'], ['workout_templates.id'], ondelete='SET NULL'),
     sa.PrimaryKeyConstraint('id'),
     sa.UniqueConstraint('plan_id', 'scheduled_for', name='uq_scheduled_workout_plan_date')
     )
@@ -247,7 +209,6 @@ def upgrade() -> None:
     op.create_index(op.f('ix_scheduled_workouts_is_completed'), 'scheduled_workouts', ['is_completed'], unique=False)
     op.create_index(op.f('ix_scheduled_workouts_plan_id'), 'scheduled_workouts', ['plan_id'], unique=False)
     op.create_index(op.f('ix_scheduled_workouts_scheduled_for'), 'scheduled_workouts', ['scheduled_for'], unique=False)
-    op.create_index(op.f('ix_scheduled_workouts_template_id'), 'scheduled_workouts', ['template_id'], unique=False)
     op.create_table('user_answers',
     sa.Column('id', sa.Integer(), nullable=False),
     sa.Column('user_id', sa.Integer(), nullable=False),
@@ -268,73 +229,46 @@ def upgrade() -> None:
     op.create_index(op.f('ix_user_answers_option_id'), 'user_answers', ['option_id'], unique=False)
     op.create_index(op.f('ix_user_answers_question_id'), 'user_answers', ['question_id'], unique=False)
     op.create_index(op.f('ix_user_answers_user_id'), 'user_answers', ['user_id'], unique=False)
-    op.create_table('workout_exercises',
-    sa.Column('workout_id', sa.Integer(), nullable=False),
+    op.create_table('scheduled_workout_exercises',
+    sa.Column('id', sa.Integer(), nullable=False),
+    sa.Column('scheduled_workout_id', sa.Integer(), nullable=False),
     sa.Column('exercise_id', sa.Integer(), nullable=False),
     sa.Column('sort_order', sa.Integer(), nullable=False),
     sa.Column('sets', sa.Integer(), nullable=True),
     sa.Column('reps', sa.Integer(), nullable=True),
     sa.Column('duration_seconds', sa.Integer(), nullable=True),
     sa.Column('rest_seconds', sa.Integer(), nullable=True),
-    sa.Column('notes', sa.String(length=500), nullable=True),
-    sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
-    sa.Column('updated_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
     sa.ForeignKeyConstraint(['exercise_id'], ['exercises.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['workout_id'], ['workout_templates.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('workout_id', 'exercise_id')
+    sa.ForeignKeyConstraint(['scheduled_workout_id'], ['scheduled_workouts.id'], ondelete='CASCADE'),
+    sa.PrimaryKeyConstraint('id')
     )
-    op.create_index(op.f('ix_workout_exercises_sort_order'), 'workout_exercises', ['sort_order'], unique=False)
-    op.create_table('workout_template_equipment',
-    sa.Column('workout_template_id', sa.Integer(), nullable=False),
-    sa.Column('equipment_id', sa.Integer(), nullable=False),
-    sa.ForeignKeyConstraint(['equipment_id'], ['equipment.id'], ondelete='CASCADE'),
-    sa.ForeignKeyConstraint(['workout_template_id'], ['workout_templates.id'], ondelete='CASCADE'),
-    sa.PrimaryKeyConstraint('workout_template_id', 'equipment_id')
-    )
-    op.create_index('idx_wt_equipment_equipment', 'workout_template_equipment', ['equipment_id'], unique=False)
-    op.create_index('idx_wt_equipment_template', 'workout_template_equipment', ['workout_template_id'], unique=False)
-    op.create_index(op.f('ix_workout_template_equipment_equipment_id'), 'workout_template_equipment', ['equipment_id'], unique=False)
-    op.create_index(op.f('ix_workout_template_equipment_workout_template_id'), 'workout_template_equipment', ['workout_template_id'], unique=False)
+    op.create_index(op.f('ix_scheduled_workout_exercises_exercise_id'), 'scheduled_workout_exercises', ['exercise_id'], unique=False)
+    op.create_index(op.f('ix_scheduled_workout_exercises_scheduled_workout_id'), 'scheduled_workout_exercises', ['scheduled_workout_id'], unique=False)
     # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     # ### commands auto generated by Alembic - please adjust! ###
-    op.drop_index(op.f('ix_workout_template_equipment_workout_template_id'), table_name='workout_template_equipment')
-    op.drop_index(op.f('ix_workout_template_equipment_equipment_id'), table_name='workout_template_equipment')
-    op.drop_index('idx_wt_equipment_template', table_name='workout_template_equipment')
-    op.drop_index('idx_wt_equipment_equipment', table_name='workout_template_equipment')
-    op.drop_table('workout_template_equipment')
-    op.drop_index(op.f('ix_workout_exercises_sort_order'), table_name='workout_exercises')
-    op.drop_table('workout_exercises')
+    op.drop_index(op.f('ix_scheduled_workout_exercises_scheduled_workout_id'), table_name='scheduled_workout_exercises')
+    op.drop_index(op.f('ix_scheduled_workout_exercises_exercise_id'), table_name='scheduled_workout_exercises')
+    op.drop_table('scheduled_workout_exercises')
     op.drop_index(op.f('ix_user_answers_user_id'), table_name='user_answers')
     op.drop_index(op.f('ix_user_answers_question_id'), table_name='user_answers')
     op.drop_index(op.f('ix_user_answers_option_id'), table_name='user_answers')
     op.drop_index('idx_user_answers_user_question', table_name='user_answers')
     op.drop_index('idx_user_answers_user_id', table_name='user_answers')
     op.drop_table('user_answers')
-    op.drop_index(op.f('ix_scheduled_workouts_template_id'), table_name='scheduled_workouts')
     op.drop_index(op.f('ix_scheduled_workouts_scheduled_for'), table_name='scheduled_workouts')
     op.drop_index(op.f('ix_scheduled_workouts_plan_id'), table_name='scheduled_workouts')
     op.drop_index(op.f('ix_scheduled_workouts_is_completed'), table_name='scheduled_workouts')
     op.drop_index('idx_scheduled_workout_plan_date', table_name='scheduled_workouts')
     op.drop_table('scheduled_workouts')
-    op.drop_table('question_template_links')
     op.drop_index(op.f('ix_custom_question_scoring_weights_question_id'), table_name='custom_question_scoring_weights')
     op.drop_index(op.f('ix_custom_question_scoring_weights_option_id'), table_name='custom_question_scoring_weights')
     op.drop_index(op.f('ix_custom_question_scoring_weights_answer_value'), table_name='custom_question_scoring_weights')
     op.drop_index('idx_scoring_weight_question_option', table_name='custom_question_scoring_weights')
     op.drop_index('idx_scoring_weight_question_answer', table_name='custom_question_scoring_weights')
     op.drop_table('custom_question_scoring_weights')
-    op.drop_index(op.f('ix_workout_templates_workout_category'), table_name='workout_templates')
-    op.drop_index(op.f('ix_workout_templates_user_id'), table_name='workout_templates')
-    op.drop_index(op.f('ix_workout_templates_is_global'), table_name='workout_templates')
-    op.drop_index(op.f('ix_workout_templates_is_active'), table_name='workout_templates')
-    op.drop_index(op.f('ix_workout_templates_goal'), table_name='workout_templates')
-    op.drop_index(op.f('ix_workout_templates_difficulty'), table_name='workout_templates')
-    op.drop_index('idx_workout_global_active', table_name='workout_templates')
-    op.drop_index('idx_workout_active_goal_difficulty', table_name='workout_templates')
-    op.drop_table('workout_templates')
     op.drop_index(op.f('ix_training_plans_user_id'), table_name='training_plans')
     op.drop_index(op.f('ix_training_plans_status'), table_name='training_plans')
     op.drop_index(op.f('ix_training_plans_start_date'), table_name='training_plans')

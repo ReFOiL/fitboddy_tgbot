@@ -7,7 +7,7 @@ from src.application.services.exercise_admin import ExerciseAdminService
 from src.infrastructure.external.file_storage import VideoFileStorage
 from src.presentation.web_admin.controller_base import BaseController
 from src.presentation.web_admin.controller_result import ControllerResult
-from src.presentation.web_admin.workout_schemas import (
+from src.presentation.web_admin.admin_schemas import (
     ExerciseCreate,
     ExerciseOut,
     ExerciseUpdate,
@@ -49,6 +49,7 @@ class ExerciseController(BaseController):
                 is_cardio=data.is_cardio,
                 difficulty=data.difficulty,
                 contraindication_ids=data.contraindication_ids,
+                workout_category=data.workout_category,
             )
             logger.info(
                 "admin.exercise.created",

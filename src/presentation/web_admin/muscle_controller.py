@@ -6,7 +6,7 @@ import structlog
 from src.application.services.muscle_admin import MuscleAdminService
 from src.presentation.web_admin.controller_base import BaseController
 from src.presentation.web_admin.controller_result import ControllerResult
-from src.presentation.web_admin.workout_schemas import MessageOut, MuscleCreate, MuscleOut, MuscleUpdate
+from src.presentation.web_admin.admin_schemas import MessageOut, MuscleCreate, MuscleOut, MuscleUpdate
 
 logger = structlog.get_logger()
 

@@ -1,12 +1,11 @@
-"""Команда /done — отметить тренировку выполненной."""
+"""Отметка «выполнено» для тренировки на сегодня (кнопка меню)."""
 from __future__ import annotations
 
 import structlog
-
 from datetime import date
 
 from aiogram import F, Router
-from aiogram.types import Message
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from dependency_injector.wiring import Provide, inject
 
 from src.application.interfaces.repositories import UnitOfWork
@@ -36,7 +35,7 @@ async def cmd_done(
     if not user:
         await message.answer(BotTexts.WORKOUTS_REGISTER_FIRST, reply_markup=main_menu())
         return
-    plan = await user_plan_service.create_or_get_active_plan(user.id)
+    plan = await user_plan_service.get_or_create_plan(user.id)
     if not plan:
         await message.answer(BotTexts.PLAN_NO_PLAN, reply_markup=main_menu())
         return
@@ -56,7 +55,15 @@ async def cmd_done(
             user_id=user.id,
             telegram_id=telegram_id,
             scheduled_workout_id=scheduled.id,
-            template_id=scheduled.template_id,
             scheduled_for=scheduled.scheduled_for.isoformat(),
         )
-    await message.answer(BotTexts.DONE_OK, reply_markup=main_menu())
+    effort_kb = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(text="Легко", callback_data=f"effort:easy:{scheduled.id}"),
+                InlineKeyboardButton(text="Нормально", callback_data=f"effort:ok:{scheduled.id}"),
+                InlineKeyboardButton(text="Тяжело", callback_data=f"effort:hard:{scheduled.id}"),
+            ]
+        ]
+    )
+    await message.answer(BotTexts.DONE_OK + "\n\n" + BotTexts.EFFORT_PROMPT, reply_markup=effort_kb)

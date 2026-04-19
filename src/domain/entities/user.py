@@ -33,7 +33,6 @@ class User(Base):
     # Все данные профиля (gender, equipment, goal, level и т.д.) хранятся в UserAnswer
     # Это единственный источник истины - никакой денормализации!
 
-    workouts: Mapped[list[WorkoutTemplate]] = relationship(back_populates="user")
     training_plans: Mapped[list[TrainingPlan]] = relationship(
         back_populates="user",
         cascade="all, delete-orphan",
@@ -44,7 +43,6 @@ class User(Base):
     )
 
 
-from src.domain.entities.workout import WorkoutTemplate  # noqa: E402  # isort:skip
 from src.domain.entities.training_plan import TrainingPlan  # noqa: E402  # isort:skip
 from src.domain.entities.user_answer import UserAnswer  # noqa: E402  # isort:skip
 

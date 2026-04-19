@@ -7,7 +7,6 @@ from src.application.services.admin_users import AdminUserService
 from src.application.services.exercise_admin import ExerciseAdminService
 from src.application.services.muscle_admin import MuscleAdminService
 from src.application.services.contraindication_admin import ContraindicationAdminService
-from src.application.services.workout_template_admin import WorkoutTemplateAdminService
 from src.application.services.equipment_admin import EquipmentAdminService
 from src.application.services.notification import NotificationService
 from src.application.services.profile_completion import ProfileCompletionService
@@ -38,17 +37,14 @@ from src.domain.questionnaire import (
 )
 from src.domain.value_objects.questionnaire import AnswerType
 from src.application.services.subscription import PremiumAccess, SubscriptionService
-from src.application.services.value_casting import LenientCaster
 from src.application.use_cases.payment.cryptobot import CryptoBotPaymentUseCase
-from src.application.use_cases.workout_generator.simple_matcher import SimpleWorkoutMatcher
-from src.application.services.workout_matcher import WorkoutMatcher
 from src.application.services.workout_scheduler import WorkoutScheduler
+from src.application.services.training_plan_generator import TrainingPlanGenerator
 from src.application.services.user_plan_service import UserPlanService
+from src.application.services.training_plan_admin import TrainingPlanAdminService
 from src.presentation.telegram_bot.flows.questionnaire.flow_service import QuestionnaireFlow
 from src.presentation.telegram_bot.flows.questionnaire.presenter import QuestionnairePresenter
 from src.presentation.telegram_bot.flows.workouts.flow_service import WorkoutsFlow
-from src.presentation.telegram_bot.flows.workouts.link_map_builder import LinkMapBuilder
-from src.presentation.telegram_bot.flows.workouts.presenter import WorkoutPlanPresenter
 from src.presentation.web_admin.question_controller import QuestionController
 from src.presentation.web_admin.question_presenters import (
     OptionsNormalizer,
@@ -60,9 +56,8 @@ from src.presentation.web_admin.user_presenters import UserPresenter
 from src.presentation.web_admin.exercise_controller import ExerciseController
 from src.presentation.web_admin.muscle_controller import MuscleController
 from src.presentation.web_admin.contraindication_controller import ContraindicationController
-from src.presentation.web_admin.workout_template_controller import WorkoutTemplateController
 from src.presentation.web_admin.equipment_controller import EquipmentController
-from src.shared.utils.profile_answers import AnswerLookup
+from src.presentation.web_admin.training_plan_admin_controller import TrainingPlanAdminController
 from src.infrastructure.cache.redis_repository import RedisCache
 from src.infrastructure.database.session import create_engine, create_session_factory
 from src.infrastructure.database.unit_of_work import SQLAlchemyUnitOfWork
@@ -136,27 +131,12 @@ class Container(containers.DeclarativeContainer):
         notification_service=notification_service,
     )
 
-    value_caster = providers.Singleton(LenientCaster)
-    answer_lookup_builder = providers.Callable(
-        lambda caster: (lambda answers: AnswerLookup(answers, caster=caster)),
-        caster=value_caster,
-    )
-    workout_matcher = providers.Factory(
-        SimpleWorkoutMatcher,
-        lookup_factory=answer_lookup_builder,
-    )
-    workout_matcher_v2 = providers.Factory(
-        WorkoutMatcher,
-        lookup_factory=answer_lookup_builder,
-    )
     workout_scheduler = providers.Singleton(WorkoutScheduler)
-    link_map_builder = providers.Factory(LinkMapBuilder)
+    training_plan_generator = providers.Factory(TrainingPlanGenerator, scheduler=workout_scheduler)
     user_plan_service = providers.Factory(
         UserPlanService,
         uow=uow,
-        matcher=workout_matcher,
-        scheduler=workout_scheduler,
-        link_map_builder=link_map_builder,
+        plan_generator=training_plan_generator,
     )
 
     text_validator = providers.Factory(TextValidator)
@@ -229,16 +209,10 @@ class Container(containers.DeclarativeContainer):
         profile_service=profile_completion_service,
         answer_service=questionnaire_answer_service,
         presenter=questionnaire_presenter,
+        user_plan_service=user_plan_service,
     )
 
-    workout_plan_presenter = providers.Factory(WorkoutPlanPresenter)
-    workouts_flow = providers.Factory(
-        WorkoutsFlow,
-        uow=uow,
-        matcher=workout_matcher,
-        presenter=workout_plan_presenter,
-        link_map_builder=link_map_builder,
-    )
+    workouts_flow = providers.Factory(WorkoutsFlow, uow=uow)
 
     custom_question_admin_service = providers.Factory(
         CustomQuestionAdminService,
@@ -270,10 +244,6 @@ class Container(containers.DeclarativeContainer):
     muscle_admin_service = providers.Factory(MuscleAdminService, uow=uow)
     contraindication_admin_service = providers.Factory(ContraindicationAdminService, uow=uow)
     equipment_admin_service = providers.Factory(EquipmentAdminService, uow=uow)
-    workout_template_admin_service = providers.Factory(
-        WorkoutTemplateAdminService,
-        uow=uow,
-    )
     exercise_controller = providers.Factory(
         ExerciseController,
         service=exercise_admin_service,
@@ -287,12 +257,14 @@ class Container(containers.DeclarativeContainer):
         ContraindicationController,
         service=contraindication_admin_service,
     )
-    workout_template_controller = providers.Factory(
-        WorkoutTemplateController,
-        service=workout_template_admin_service,
-    )
     equipment_controller = providers.Factory(
         EquipmentController,
         service=equipment_admin_service,
+    )
+
+    training_plan_admin_service = providers.Factory(TrainingPlanAdminService, uow=uow)
+    training_plan_admin_controller = providers.Factory(
+        TrainingPlanAdminController,
+        service=training_plan_admin_service,
     )
 

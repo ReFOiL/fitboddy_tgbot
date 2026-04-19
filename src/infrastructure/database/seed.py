@@ -1,47 +1,18 @@
 from __future__ import annotations
 
 from src.application.interfaces.repositories import UnitOfWork
-from src.application.use_cases.workout_generator.seed_templates import get_default_templates
-from src.domain.entities.associations import WorkoutExercise
 from src.domain.entities.contraindication import Contraindication
 from src.domain.entities.exercise import Exercise
 from src.domain.entities.muscle import Muscle
 from src.domain.entities.questionnaire import CustomQuestion, CustomQuestionOption
 from src.domain.value_objects.questionnaire import AnswerType
-from src.domain.entities.workout import WorkoutDifficulty, WorkoutTemplate
-
-
-class WorkoutTemplateSeeder:
-    def __init__(self, uow: UnitOfWork) -> None:
-        self._uow = uow
-
-    async def run(self) -> int:
-        async with self._uow:
-            existing = await self._uow.workouts.list_all()
-            if existing:
-                return 0
-            templates_data = get_default_templates()
-            
-            # Устанавливаем связи required_equipment на основе имени оборудования
-            for template, equipment_name in templates_data:
-                if equipment_name:
-                    # Ищем Equipment по name
-                    equipment = await self._uow.equipment.get_by_name(equipment_name)
-                    if equipment:
-                        template.required_equipment.append(equipment)
-                
-                await self._uow.workouts.add(template)
-            await self._uow.commit()
-            return len(templates_data)
 
 
 class WorkoutMvpFixturesSeeder:
     """
     Фикстуры для MVP тренировок:
-    - базовые упражнения (10 шт)
-    - 3-5 шаблонов тренировок
-    - связи WorkoutExercise с параметрами
-    - video_url как object_name (ключ) для MinIO (заглушки)
+    - каталог из 50 упражнений (категории для планировщика; много вариантов без инвентаря)
+    - video_url как ключ для MinIO (заглушки)
     """
 
     def __init__(self, uow: UnitOfWork) -> None:
@@ -52,23 +23,62 @@ class WorkoutMvpFixturesSeeder:
         async with self._uow:
             created += await self._seed_muscles_and_contraindications()
             created += await self._seed_exercises()
-            created += await self._seed_templates_with_links()
             if created:
                 await self._uow.commit()
         return created
 
-    # Каталог упражнений: имя, описание, video_url, список имён мышц, equipment, difficulty, is_cardio, противопоказания
-    _EXERCISE_CATALOG: list[tuple[str, str, str, list[str], str, int, bool, list[str]]] = [
-        ("Присед", "Базовое упражнение на ноги и корпус.", "videos/demo/squat.mp4", ["quadriceps", "glutes", "core"], "none", 2, False, []),
-        ("Жим лежа", "Базовое упражнение на грудь и трицепс.", "videos/demo/bench_press.mp4", ["chest", "triceps", "shoulders"], "barbell", 3, False, []),
-        ("Тяга (становая)", "Базовое упражнение на заднюю цепь.", "videos/demo/deadlift.mp4", ["back", "glutes", "hamstrings"], "barbell", 4, False, []),
-        ("Жим над головой", "Плечи и трицепс.", "videos/demo/overhead_press.mp4", ["shoulders", "triceps"], "dumbbells", 3, False, []),
-        ("Подтягивания", "Спина и бицепс (можно с резинкой).", "videos/demo/pullups.mp4", ["back", "biceps"], "none", 4, False, []),
-        ("Тяга гантели в наклоне", "Спина и задняя дельта.", "videos/demo/dumbbell_row.mp4", ["back", "rear_delts", "biceps"], "dumbbells", 2, False, []),
-        ("Выпады", "Ноги и ягодицы.", "videos/demo/lunges.mp4", ["quadriceps", "glutes", "hamstrings"], "none", 2, False, []),
-        ("Планка", "Статика на корпус.", "videos/demo/plank.mp4", ["core"], "none", 1, False, []),
-        ("Берпи", "Кардио + все тело.", "videos/demo/burpees.mp4", ["full_body"], "none", 3, True, []),
-        ("Прыжки Jumping Jacks", "Легкое кардио-разогрев.", "videos/demo/jumping_jacks.mp4", ["full_body"], "none", 1, True, []),
+    # name, description, video_url, muscles, equipment, difficulty, is_cardio, contras, workout_category
+    _EXERCISE_CATALOG: list[tuple[str, str, str, list[str], str, int, bool, list[str], str]] = [
+        ("Присед", "Базовое упражнение на ноги и корпус.", "videos/demo/squat.mp4", ["quadriceps", "glutes", "core"], "none", 2, False, [], "lower"),
+        ("Жим лежа", "Базовое упражнение на грудь и трицепс.", "videos/demo/bench_press.mp4", ["chest", "triceps", "shoulders"], "barbell", 3, False, [], "upper"),
+        ("Тяга (становая)", "Базовое упражнение на заднюю цепь.", "videos/demo/deadlift.mp4", ["back", "glutes", "hamstrings"], "barbell", 4, False, [], "lower"),
+        ("Жим над головой", "Плечи и трицепс.", "videos/demo/overhead_press.mp4", ["shoulders", "triceps"], "dumbbells", 3, False, [], "upper"),
+        ("Подтягивания", "Спина и бицепс (можно с резинкой).", "videos/demo/pullups.mp4", ["back", "biceps"], "none", 4, False, [], "upper"),
+        ("Тяга гантели в наклоне", "Спина и задняя дельта.", "videos/demo/dumbbell_row.mp4", ["back", "rear_delts", "biceps"], "dumbbells", 2, False, [], "upper"),
+        ("Выпады", "Ноги и ягодицы.", "videos/demo/lunges.mp4", ["quadriceps", "glutes", "hamstrings"], "none", 2, False, [], "lower"),
+        ("Планка", "Статика на корпус.", "videos/demo/plank.mp4", ["core"], "none", 1, False, [], "full_body"),
+        ("Берпи", "Кардио + все тело.", "videos/demo/burpees.mp4", ["full_body"], "none", 3, True, [], "cardio"),
+        ("Прыжки Jumping Jacks", "Легкое кардио-разогрев.", "videos/demo/jumping_jacks.mp4", ["full_body"], "none", 1, True, [], "cardio"),
+        ("Отжимания от пола", "Грудь и трицепс без веса.", "videos/demo/pushups.mp4", ["chest", "triceps", "core"], "none", 2, False, [], "upper"),
+        ("Румынская тяга", "Задняя цепь с гантелями.", "videos/demo/rdl.mp4", ["hamstrings", "glutes", "back"], "dumbbells", 3, False, [], "lower"),
+        ("Французский жим", "Изоляция трицепса.", "videos/demo/french_press.mp4", ["triceps"], "dumbbells", 2, False, [], "upper"),
+        ("Гоблет-присед", "Присед с удержанием веса.", "videos/demo/goblet_squat.mp4", ["quadriceps", "glutes", "core"], "dumbbells", 2, False, [], "lower"),
+        ("Скалолаз", "Кардио на корпус и ноги.", "videos/demo/mountain_climber.mp4", ["core", "full_body"], "none", 2, True, [], "cardio"),
+        ("Супермен", "Разгибание спины лёжа.", "videos/demo/superman.mp4", ["back", "glutes"], "none", 1, False, [], "full_body"),
+        ("Шаги на месте", "Лёгкое кардио.", "videos/demo/march.mp4", ["quadriceps", "full_body"], "none", 1, True, [], "cardio"),
+        ("Обратные отжимания", "Трицепс от скамьи/края.", "videos/demo/bench_dips.mp4", ["triceps", "shoulders"], "none", 3, False, [], "upper"),
+        ("Боковая планка", "Статика косых.", "videos/demo/side_plank.mp4", ["core"], "none", 2, False, [], "full_body"),
+        ("Велосипед", "Кручение локтей к колену лёжа.", "videos/demo/bicycle_crunch.mp4", ["core"], "none", 2, False, [], "full_body"),
+        ("Высокие колени", "Подъём коленей к груди стоя.", "videos/demo/high_knees.mp4", ["core", "hip_flexors", "full_body"], "none", 1, True, [], "cardio"),
+        ("Отжимания широкие", "Акцент на грудь.", "videos/demo/pushups_wide.mp4", ["chest", "shoulders"], "none", 2, False, [], "upper"),
+        ("Отжимания узкие", "Акцент на трицепс.", "videos/demo/pushups_narrow.mp4", ["triceps", "chest", "core"], "none", 2, False, [], "upper"),
+        ("Ягодичный мост", "Сжатие ягодиц лёжа на спине.", "videos/demo/hip_bridge.mp4", ["glutes", "hamstrings", "core"], "none", 1, False, [], "lower"),
+        ("Присед у стены", "Статика квадрицепсов у стены.", "videos/demo/wall_squat.mp4", ["quadriceps", "glutes"], "none", 2, False, [], "lower"),
+        ("Выпад в сторону", "Боковой выпад без веса.", "videos/demo/side_lunge.mp4", ["quadriceps", "glutes", "adductors"], "none", 2, False, [], "lower"),
+        ("Наклон вперёд без веса", "Мягкая проработка задней цепи.", "videos/demo/bodyweight_good_morning.mp4", ["hamstrings", "back", "glutes"], "none", 1, False, [], "full_body"),
+        ("Альпинист в упоре", "Усложнённый темп скалолаза.", "videos/demo/mountain_climber_slow.mp4", ["core", "shoulders", "full_body"], "none", 2, True, [], "cardio"),
+        ("Присед сумо", "Широкая постановка стоп.", "videos/demo/sumo_squat.mp4", ["quadriceps", "glutes", "adductors"], "none", 2, False, [], "lower"),
+        ("Отжимания от стены", "Лёгкий вариант отжиманий.", "videos/demo/wall_pushup.mp4", ["chest", "shoulders", "triceps"], "none", 1, False, [], "upper"),
+        ("Обратная планка", "Упор сзади на ладони и пятки.", "videos/demo/reverse_plank.mp4", ["shoulders", "back", "core", "glutes"], "none", 2, False, [], "full_body"),
+        ("Полый корпус", "Hollow body: лопатки и ноги от пола.", "videos/demo/hollow_hold.mp4", ["core"], "none", 2, False, [], "full_body"),
+        ("Подъём ног лёжа", "Пресс и сгибатели бедра.", "videos/demo/lying_leg_raise.mp4", ["core", "hip_flexors"], "none", 2, False, [], "full_body"),
+        ("Русское скручивание", "Повороты корпуса без веса.", "videos/demo/russian_twist.mp4", ["obliques", "core"], "none", 1, False, [], "full_body"),
+        ("Выпады вперёд ходьбой", "Чередование ног в движении.", "videos/demo/walking_lunge.mp4", ["quadriceps", "glutes", "hamstrings"], "none", 2, False, [], "lower"),
+        ("Присед на одной ноге с опорой", "Упрощённый пистолет у стены/стула.", "videos/demo/assisted_pistol.mp4", ["quadriceps", "glutes", "core"], "none", 3, False, [], "lower"),
+        ("Плиометрический выпад", "Выпад со сменой ног в прыжке.", "videos/demo/jumping_lunge.mp4", ["quadriceps", "glutes", "full_body"], "none", 3, True, [], "cardio"),
+        ("Имитация скакалки", "Прыжки на носках без каната.", "videos/demo/shadow_jump_rope.mp4", ["calves", "shoulders", "full_body"], "none", 1, True, [], "cardio"),
+        ("Ползун медведя", "На четвереньках вперёд-назад.", "videos/demo/bear_crawl.mp4", ["full_body", "core", "shoulders"], "none", 2, True, [], "full_body"),
+        ("Ход краба", "Садясь, движение спиной вперёд.", "videos/demo/crab_walk.mp4", ["triceps", "shoulders", "glutes"], "none", 2, False, [], "upper"),
+        ("Инчворм", "Из стоя в планку шагами рук.", "videos/demo/inchworm.mp4", ["hamstrings", "core", "shoulders"], "none", 2, False, [], "full_body"),
+        ("Складка стоя — планка", "Динамическая связка.", "videos/demo/walkout_plank.mp4", ["core", "shoulders", "hamstrings"], "none", 2, False, [], "full_body"),
+        ("Тяга локтя в планке", "Подтягивание локтя к ребру.", "videos/demo/renegade_row_bodyweight.mp4", ["back", "core", "biceps"], "none", 2, False, [], "upper"),
+        ("Разведение рук в Т", "Наклон, махи назад без веса.", "videos/demo/bodyweight_rear_fly.mp4", ["rear_delts", "back"], "none", 1, False, [], "upper"),
+        ("Круги руками", "Разминка плеч.", "videos/demo/arm_circles.mp4", ["shoulders"], "none", 1, False, [], "upper"),
+        ("Присед с паузой", "Задержка в нижней точке.", "videos/demo/pause_squat.mp4", ["quadriceps", "glutes", "core"], "none", 2, False, [], "lower"),
+        ("Попеременные колени", "По одному колену к груди стоя.", "videos/demo/alternating_knee_drive.mp4", ["hip_flexors", "core", "full_body"], "none", 1, True, [], "cardio"),
+        ("Скалолаз к локтю", "Колено к противоположному локтю.", "videos/demo/cross_body_mountain_climber.mp4", ["core", "obliques"], "none", 2, True, [], "cardio"),
+        ("Боковой шаг", "Низкие шаги в сторону.", "videos/demo/side_shuffle.mp4", ["quadriceps", "glutes", "calves"], "none", 1, True, [], "cardio"),
+        ("Звёздный прыжок", "Прыжок «звезда».", "videos/demo/star_jump.mp4", ["full_body"], "none", 2, True, [], "cardio"),
     ]
 
     async def _get_or_create_muscle(self, name: str) -> Muscle:
@@ -93,7 +103,8 @@ class WorkoutMvpFixturesSeeder:
         added = 0
         muscle_names: set[str] = set()
         contra_names: set[str] = set()
-        for _, _, _, muscles, _, _, _, contras in self._EXERCISE_CATALOG:
+        for row in self._EXERCISE_CATALOG:
+            _, _, _, muscles, _, _, _, contras, _ = row
             muscle_names.update(muscles)
             contra_names.update(contras)
         for name in muscle_names:
@@ -112,7 +123,17 @@ class WorkoutMvpFixturesSeeder:
 
     async def _seed_exercises(self) -> int:
         added = 0
-        for name, description, video_url, muscle_names, equipment, difficulty, is_cardio, contra_names in self._EXERCISE_CATALOG:
+        for (
+            name,
+            description,
+            video_url,
+            muscle_names,
+            equipment,
+            difficulty,
+            is_cardio,
+            contra_names,
+            workout_category,
+        ) in self._EXERCISE_CATALOG:
             existing = await self._uow.exercises.get_by_name(name)
             if existing is not None:
                 continue
@@ -125,113 +146,12 @@ class WorkoutMvpFixturesSeeder:
                 equipment=equipment,
                 difficulty=difficulty,
                 is_cardio=is_cardio,
+                workout_category=workout_category,
             )
             exercise.muscles = muscles
             exercise.contraindications = contras
             await self._uow.exercises.add(exercise)
             await self._uow.flush()
-            added += 1
-        return added
-
-    async def _seed_templates_with_links(self) -> int:
-        existing_templates = await self._uow.workouts.list_all()
-        by_title = {t.title: t for t in existing_templates}
-
-        exercises = await self._uow.exercises.list_all()
-        ex_by_name = {e.name: e for e in exercises}
-
-        def ex(name: str) -> Exercise:
-            return ex_by_name[name]
-
-        templates_data: list[tuple[WorkoutTemplate, str | None]] = [
-            (
-                WorkoutTemplate(
-                    title="Силовая — Full Body (новичок)",
-                    goal="muscle_gain",
-                    difficulty=WorkoutDifficulty.LOW,
-                    days_per_week=3,
-                    description="Базовая силовая на все тело.",
-                    is_active=True,
-                    intensity_factor=1.0,
-                    workout_category="full_body",
-                    workout_exercises=[
-                        WorkoutExercise(exercise=ex("Присед"), sort_order=1, sets=3, reps=10, rest_seconds=60),
-                        WorkoutExercise(exercise=ex("Жим над головой"), sort_order=2, sets=3, reps=10, rest_seconds=60),
-                        WorkoutExercise(exercise=ex("Тяга гантели в наклоне"), sort_order=3, sets=3, reps=12, rest_seconds=60),
-                        WorkoutExercise(exercise=ex("Планка"), sort_order=4, duration_seconds=45, rest_seconds=45),
-                    ],
-                ),
-                "dumbbells",
-            ),
-            (
-                WorkoutTemplate(
-                    title="Похудение — Кардио круговая (дом)",
-                    goal="weight_loss",
-                    difficulty=WorkoutDifficulty.LOW,
-                    days_per_week=3,
-                    description="Короткие круги + базовые движения.",
-                    is_active=True,
-                    intensity_factor=0.8,
-                    workout_category="cardio",
-                    workout_exercises=[
-                        WorkoutExercise(exercise=ex("Прыжки Jumping Jacks"), sort_order=1, duration_seconds=45, rest_seconds=20),
-                        WorkoutExercise(exercise=ex("Берпи"), sort_order=2, sets=3, reps=10, rest_seconds=60),
-                        WorkoutExercise(exercise=ex("Выпады"), sort_order=3, sets=3, reps=12, rest_seconds=60),
-                        WorkoutExercise(exercise=ex("Планка"), sort_order=4, duration_seconds=45, rest_seconds=45),
-                    ],
-                ),
-                None,  # Без оборудования
-            ),
-            (
-                WorkoutTemplate(
-                    title="Силовая — База со штангой",
-                    goal="muscle_gain",
-                    difficulty=WorkoutDifficulty.MEDIUM,
-                    days_per_week=3,
-                    description="База: присед/жим/становая.",
-                    is_active=True,
-                    intensity_factor=1.5,
-                    workout_category="full_body",
-                    workout_exercises=[
-                        WorkoutExercise(exercise=ex("Присед"), sort_order=1, sets=5, reps=5, rest_seconds=120),
-                        WorkoutExercise(exercise=ex("Жим лежа"), sort_order=2, sets=5, reps=5, rest_seconds=120),
-                        WorkoutExercise(exercise=ex("Тяга (становая)"), sort_order=3, sets=3, reps=5, rest_seconds=180),
-                    ],
-                ),
-                "barbell",
-            ),
-            (
-                WorkoutTemplate(
-                    title="Выносливость — базовая",
-                    goal="endurance",
-                    difficulty=WorkoutDifficulty.MEDIUM,
-                    days_per_week=4,
-                    description="Кардио+корпус.",
-                    is_active=True,
-                    intensity_factor=1.2,
-                    workout_category="cardio",
-                    workout_exercises=[
-                        WorkoutExercise(exercise=ex("Прыжки Jumping Jacks"), sort_order=1, duration_seconds=60, rest_seconds=20),
-                        WorkoutExercise(exercise=ex("Берпи"), sort_order=2, sets=4, reps=8, rest_seconds=60),
-                        WorkoutExercise(exercise=ex("Планка"), sort_order=3, duration_seconds=60, rest_seconds=30),
-                    ],
-                ),
-                None,  # Без оборудования
-            ),
-        ]
-
-        added = 0
-        for tpl, equipment_name in templates_data:
-            if tpl.title in by_title:
-                continue
-            
-            # Устанавливаем связи required_equipment на основе имени оборудования
-            if equipment_name:
-                equipment = await self._uow.equipment.get_by_name(equipment_name)
-                if equipment:
-                    tpl.required_equipment.append(equipment)
-            
-            await self._uow.workouts.add(tpl)
             added += 1
         return added
 

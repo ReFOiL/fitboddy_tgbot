@@ -7,7 +7,7 @@ from src.application.services.equipment_admin import EquipmentAdminService
 from src.presentation.web_admin.controller_base import BaseController
 from src.presentation.web_admin.controller_result import ControllerResult
 from src.presentation.web_admin.equipment_schemas import EquipmentCreate, EquipmentOut, EquipmentUpdate
-from src.presentation.web_admin.workout_schemas import MessageOut
+from src.presentation.web_admin.admin_schemas import MessageOut
 
 logger = structlog.get_logger()
 

@@ -8,8 +8,7 @@ class BotTexts(StrEnum):
 
     WORKOUTS_REGISTER_FIRST = "Сначала зарегистрируйтесь через /start."
     WORKOUTS_COMPLETE_QUESTIONNAIRE = "Сначала пройдите анкету."
-    WORKOUTS_NO_TEMPLATES = "Пока нет шаблонов тренировок. Попробуйте позже."
-    WORKOUTS_NO_MATCH = "Не удалось подобрать тренировки под вашу анкету."
+    WORKOUTS_USE_MY_PLAN = "План собирается из каталога упражнений. Откройте «Мой план» в меню или отправьте /myplan."
     WORKOUTS_EXITED = "Возвращаю в главное меню."
 
     PLAN_NO_PLAN = "Сначала пройдите анкету и получите план: нажмите «Тренировки» в меню."
@@ -19,6 +18,11 @@ class BotTexts(StrEnum):
     EXERCISE_NO_EXERCISE = "Упражнение не найдено."
     DONE_ALREADY = "Эта тренировка уже отмечена выполненной."
     DONE_OK = "✅ Тренировка отмечена выполненной!"
+    WORKOUT_NOT_FOUND = "Тренировка не найдена."
+    WORKOUT_NOT_YOURS = "Это не ваша тренировка."
+    WORKOUT_DETAIL_HEADER = "🏋️ Тренировка"
+    EFFORT_PROMPT = "Как по ощущениям?"
+    EFFORT_SAVED = "Спасибо, учтём в будущем."
 
     QUESTIONNAIRE_COMPLETED = "🎉 Анкета завершена!"
     QUESTIONNAIRE_FINISHED_PROMPT = "Анкета завершена. Что дальше?"

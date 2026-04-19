@@ -9,7 +9,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.domain.entities.base import Base
 
 if TYPE_CHECKING:
-    from src.domain.entities.workout import WorkoutTemplate
     from src.domain.entities.user import User
 
 
@@ -31,9 +30,4 @@ class Equipment(Base):
         onupdate=func.now(),
     )
 
-    # Связи
-    workout_templates: Mapped[list[WorkoutTemplate]] = relationship(
-        secondary="workout_template_equipment",
-        back_populates="required_equipment",
-    )
     # Примечание: связь с User удалена - данные об оборудовании пользователя хранятся в UserAnswer

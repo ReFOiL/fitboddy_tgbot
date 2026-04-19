@@ -6,7 +6,7 @@ import structlog
 from src.application.services.contraindication_admin import ContraindicationAdminService
 from src.presentation.web_admin.controller_base import BaseController
 from src.presentation.web_admin.controller_result import ControllerResult
-from src.presentation.web_admin.workout_schemas import (
+from src.presentation.web_admin.admin_schemas import (
     ContraindicationCreate,
     ContraindicationOut,
     ContraindicationUpdate,

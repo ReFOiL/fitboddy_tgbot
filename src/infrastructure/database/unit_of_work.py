@@ -11,9 +11,7 @@ from src.infrastructure.database.repositories.contraindication import Contraindi
 from src.infrastructure.database.repositories.payment import PaymentRepository
 from src.infrastructure.database.repositories.user import UserRepository
 from src.infrastructure.database.repositories.custom_question import CustomQuestionRepository
-from src.infrastructure.database.repositories.question_template_link import QuestionTemplateLinkRepository
 from src.infrastructure.database.repositories.user_answer import UserAnswerRepository
-from src.infrastructure.database.repositories.workout import WorkoutTemplateRepository
 from src.infrastructure.database.repositories.training_plan import TrainingPlanRepository
 from src.infrastructure.database.repositories.scheduled_workout import ScheduledWorkoutRepository
 from src.infrastructure.database.repositories.admin_account import AdminAccountRepository
@@ -33,15 +31,12 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
         self.exercises = ExerciseRepository(self._session)
         self.muscles = MuscleRepository(self._session)
         self.contraindications = ContraindicationRepository(self._session)
-        self.workouts = WorkoutTemplateRepository(self._session)
         self.training_plans = TrainingPlanRepository(self._session)
         self.scheduled_workouts = ScheduledWorkoutRepository(self._session)
         self.payments = PaymentRepository(self._session)
         self.custom_questions = CustomQuestionRepository(self._session)
         self.user_answers = UserAnswerRepository(self._session)
-        self.question_template_links = QuestionTemplateLinkRepository(self._session)
         self.equipment = EquipmentRepository(self._session)
-        # Gender модель удалена - пол хранится как строка в workout_template_allowed_genders
         return self
 
     async def __aexit__(
@@ -50,25 +45,24 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
         exc: BaseException | None,
         tb: TracebackType | None,
     ) -> None:
-        if not self._session:
-            return
-        if exc:
+        assert self._session is not None
+        if exc_type is not None:
             await self._session.rollback()
         await self._session.close()
+        self._session = None
 
     async def commit(self) -> None:
-        if self._session:
-            await self._session.commit()
+        assert self._session is not None
+        await self._session.commit()
 
     async def flush(self) -> None:
-        if self._session:
-            await self._session.flush()
+        assert self._session is not None
+        await self._session.flush()
 
     async def rollback(self) -> None:
-        if self._session:
-            await self._session.rollback()
+        assert self._session is not None
+        await self._session.rollback()
 
     async def refresh(self, entity: Base) -> None:
-        if self._session:
-            await self._session.refresh(entity)
-
+        assert self._session is not None
+        await self._session.refresh(entity)

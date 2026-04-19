@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import structlog
+
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
 from src.application.services.questionnaire_flow_queries import QuestionnaireFlowQueries
 from src.application.services.questionnaire_answers import QuestionnaireAnswerService
 from src.application.services.profile_completion import ProfileCompletionService
+from src.application.services.user_plan_service import UserPlanService
 from src.application.services.user_registration import UserRegistrationService
 from src.domain.questionnaire import Question
 from src.presentation.telegram_bot.flows import (
@@ -20,6 +23,8 @@ from src.presentation.telegram_bot.flows.questionnaire.navigation import Questio
 from src.presentation.telegram_bot.keyboards.builders import main_menu
 from src.presentation.telegram_bot.texts import BotTexts
 
+logger = structlog.get_logger()
+
 
 class QuestionnaireFlow(BaseFlow, UserContextMixin, EnsureUserMixin, NavigationMixin):
     def __init__(
@@ -29,12 +34,14 @@ class QuestionnaireFlow(BaseFlow, UserContextMixin, EnsureUserMixin, NavigationM
         profile_service: ProfileCompletionService,
         answer_service: QuestionnaireAnswerService,
         presenter: QuestionnairePresenter | None = None,
+        user_plan_service: UserPlanService | None = None,
     ) -> None:
         self._queries = queries
         self._user_service = user_service
         self._profile_service = profile_service
         self._answer_service = answer_service
         self._presenter = presenter or QuestionnairePresenter()
+        self._user_plan_service = user_plan_service
 
     async def start(self, message: Message, state: FSMContext) -> None:
         state_service = QuestionnaireStateService(state)
@@ -89,6 +96,16 @@ class QuestionnaireFlow(BaseFlow, UserContextMixin, EnsureUserMixin, NavigationM
         question, is_completed = await self._queries.next_question(db_user_id)
         if is_completed:
             await self._profile_service.mark_completed(db_user_id)
+            if self._user_plan_service is not None:
+                try:
+                    plan = await self._user_plan_service.get_or_create_plan(db_user_id)
+                    logger.info(
+                        "questionnaire.plan_after_completion",
+                        user_id=db_user_id,
+                        plan_created=plan is not None,
+                    )
+                except Exception:
+                    logger.exception("questionnaire.plan_after_completion_failed", user_id=db_user_id)
             await state_service.clear()
             await message.answer(BotTexts.QUESTIONNAIRE_COMPLETED, reply_markup=main_menu())
             return

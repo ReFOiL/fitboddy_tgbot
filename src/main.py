@@ -13,7 +13,6 @@ from src.infrastructure.observability.structlog_config import setup_structlog
 from src.infrastructure.database.seed import (
     CustomQuestionSeeder,
     WorkoutMvpFixturesSeeder,
-    WorkoutTemplateSeeder,
 )
 from src.presentation.telegram_bot.auto_import import import_handlers
 from src.presentation.telegram_bot.dispatcher import create_dispatcher
@@ -38,8 +37,6 @@ async def _run_bot() -> None:
 
     seeded_mvp = await WorkoutMvpFixturesSeeder(container.uow()).run()
     logger.info("seed.workout_mvp", added=seeded_mvp)
-    seeded_templates = await WorkoutTemplateSeeder(container.uow()).run()
-    logger.info("seed.workout_templates", added=seeded_templates)
     seeded_questions = await CustomQuestionSeeder(container.uow()).run()
     logger.info("seed.custom_questions", added=seeded_questions)
     dp = create_dispatcher(storage=storage)

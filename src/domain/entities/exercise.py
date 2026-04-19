@@ -9,12 +9,9 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from src.domain.entities.base import Base
 
 if TYPE_CHECKING:
-    from src.domain.entities.associations import WorkoutExercise
     from src.domain.entities.contraindication import Contraindication
     from src.domain.entities.muscle import Muscle
-    from src.domain.entities.workout import WorkoutTemplate
 
-# Таблицы связей M2M: упражнение <-> мышцы, упражнение <-> противопоказания
 exercise_muscles = Table(
     "exercise_muscles",
     Base.metadata,
@@ -39,6 +36,11 @@ class Exercise(Base):
     equipment: Mapped[str | None] = mapped_column(String(64), nullable=True)
     is_cardio: Mapped[bool] = mapped_column(Boolean, default=False)
     difficulty: Mapped[int] = mapped_column(Integer, default=1)
+    workout_category: Mapped[str] = mapped_column(
+        String(50),
+        default="full_body",
+        doc="Группировка для планировщика: full_body | upper | lower | cardio",
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
@@ -58,13 +60,3 @@ class Exercise(Base):
         back_populates="exercises",
         lazy="selectin",
     )
-    workout_exercises: Mapped[list[WorkoutExercise]] = relationship(
-        back_populates="exercise",
-        cascade="all, delete-orphan",
-    )
-    workout_templates: Mapped[list[WorkoutTemplate]] = relationship(
-        secondary="workout_exercises",
-        viewonly=True,
-        back_populates="exercises",
-    )
-

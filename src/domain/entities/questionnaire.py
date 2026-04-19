@@ -2,19 +2,11 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, JSON, String, Table, Column, UniqueConstraint, func
+from sqlalchemy import Boolean, CheckConstraint, DateTime, Enum, ForeignKey, Index, Integer, JSON, String, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.entities.base import Base
 from src.domain.value_objects.questionnaire import AnswerType
-
-
-question_template_links = Table(
-    "question_template_links",
-    Base.metadata,
-    Column("question_id", ForeignKey("custom_questions.id", ondelete="CASCADE"), primary_key=True),
-    Column("template_id", ForeignKey("workout_templates.id", ondelete="CASCADE"), primary_key=True),
-)
 
 
 class CustomQuestion(Base):
@@ -23,13 +15,12 @@ class CustomQuestion(Base):
     
     Системные вопросы (is_system=True), ключи вида system:*:
     - MVP: goal, level, workout_location, equipment, workouts_per_week, age, gender.
-    - Используются для фильтрации и матчинга тренировок
+    - Используются для фильтрации и подбора упражнений
     - Не могут быть удалены через админку
     
     Кастомные вопросы (is_system=False):
     - Создаются через админку
     - Используются для дополнительного скоринга
-    - Могут быть привязаны к шаблонам через question_template_links
     """
 
     __tablename__ = "custom_questions"
@@ -76,10 +67,6 @@ class CustomQuestion(Base):
         back_populates="question",
         order_by="CustomQuestionOption.sort_order",
         cascade="all, delete-orphan",
-    )
-    workout_templates: Mapped[list[WorkoutTemplate]] = relationship(
-        secondary="question_template_links",
-        back_populates="linked_questions",
     )
     scoring_weights: Mapped[list[CustomQuestionScoringWeight]] = relationship(
         back_populates="question",
@@ -162,5 +149,3 @@ class CustomQuestionScoringWeight(Base):
         ),
     )
 
-
-from src.domain.entities.workout import WorkoutTemplate  # noqa: E402  # isort:skip

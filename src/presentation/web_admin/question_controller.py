@@ -100,11 +100,6 @@ class QuestionController(BaseController):
             return self.not_found("Question not found")
         return self.ok(MessageOut(message="Order updated"))
 
-    async def link_template(self, question_id: int, template_id: int) -> ControllerResult[MessageOut]:
-        await self._service.link_template(question_id, template_id)
-        logger.info("admin.question.template_linked", question_id=question_id, template_id=template_id)
-        return self.ok(MessageOut(message="Link created"))
-
     async def list_scoring_weights(self, question_id: int) -> ControllerResult[list[ScoringWeightOut]]:
         try:
             weights = await self._service.list_scoring_weights(question_id)

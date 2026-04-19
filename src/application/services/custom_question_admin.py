@@ -144,13 +144,6 @@ class CustomQuestionAdminService:
 
             await self._uow.commit()
 
-    async def link_template(self, question_id: int, template_id: int) -> None:
-        async with self._uow:
-            await self._uow.question_template_links.add(
-                question_id=question_id, template_id=template_id
-            )
-            await self._uow.commit()
-
     async def list_scoring_weights(self, question_id: int) -> list[CustomQuestionScoringWeight]:
         async with self._uow:
             question = await self._uow.custom_questions.get(question_id)

@@ -17,7 +17,6 @@ if str(project_root) not in sys.path:
 from src.domain.entities.base import Base
 from src.domain.entities import (  # noqa: F401 — побочный эффект: все ORM-модели в реестре до первого User()
     admin_account,
-    associations,
     contraindication,
     exercise,
     muscle,
@@ -26,13 +25,11 @@ from src.domain.entities import (  # noqa: F401 — побочный эффек�
     training_plan,
     user,
     user_answer,
-    workout,
 )
 from src.domain.entities.equipment import Equipment
 from src.domain.entities.questionnaire import CustomQuestion, CustomQuestionOption, CustomQuestionScoringWeight
 from src.domain.entities.user_answer import UserAnswer
 from src.domain.entities.user import User, Tariff
-from src.domain.entities.workout import WorkoutDifficulty, WorkoutTemplate
 from src.domain.value_objects.questionnaire import AnswerType
 
 
@@ -112,59 +109,6 @@ async def sample_user(db_session: AsyncSession) -> User:
     db_session.add(user)
     await db_session.flush()
     return user
-
-
-@pytest.fixture
-async def sample_workout_templates(db_session: AsyncSession, sample_equipment: list[Equipment]) -> list[WorkoutTemplate]:
-    """Создаёт тестовые шаблоны тренировок."""
-    templates: list[WorkoutTemplate] = [
-        WorkoutTemplate(
-            title="Кардио для похудения",
-            goal="weight_loss",
-            difficulty=WorkoutDifficulty.LOW,
-            days_per_week=3,
-            intensity_factor=1.0,
-            workout_category="cardio",
-            is_active=True,
-        ),
-        WorkoutTemplate(
-            title="Силовая для массы",
-            goal="muscle_gain",
-            difficulty=WorkoutDifficulty.MEDIUM,
-            days_per_week=4,
-            intensity_factor=1.5,
-            workout_category="full_body",
-            is_active=True,
-        ),
-        WorkoutTemplate(
-            title="Домашняя тренировка",
-            goal="weight_loss",
-            difficulty=WorkoutDifficulty.LOW,
-            days_per_week=3,
-            intensity_factor=0.8,
-            workout_category="full_body",
-            is_active=True,
-        ),
-        WorkoutTemplate(
-            title="Продвинутая силовая",
-            goal="muscle_gain",
-            difficulty=WorkoutDifficulty.HIGH,
-            days_per_week=5,
-            intensity_factor=2.0,
-            workout_category="push",
-            is_active=True,
-        ),
-    ]
-    
-    # Привязываем оборудование
-    templates[0].required_equipment = []  # Без оборудования
-    templates[1].required_equipment = [sample_equipment[1]]  # barbell
-    templates[2].required_equipment = [sample_equipment[0]]  # dumbbells
-    templates[3].required_equipment = [sample_equipment[1]]  # barbell
-    
-    db_session.add_all(templates)
-    await db_session.flush()
-    return templates
 
 
 @pytest.fixture

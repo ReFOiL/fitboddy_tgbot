@@ -1,15 +1,16 @@
-"""Команда /today — тренировка на сегодня."""
+"""Тренировка на сегодня: меню и команда /today."""
 from __future__ import annotations
 
 import structlog
-
 from datetime import date
 
 from aiogram import F, Router
+from aiogram.filters import Command
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from dependency_injector.wiring import Provide, inject
 
 from src.application.interfaces.repositories import UnitOfWork
+from src.application.services.scheduled_workout_lines import ordered_lines, workout_title
 from src.application.services.user_plan_service import UserPlanService
 from src.presentation.telegram_bot.keyboards.builders import main_menu, MENU_TODAY_WORKOUT
 from src.presentation.telegram_bot.texts import BotTexts
@@ -20,6 +21,13 @@ logger = structlog.get_logger()
 router = Router()
 
 
+def _scaled_int(value: int | None, mult: float) -> int | None:
+    if value is None:
+        return None
+    return max(1, int(round(value * mult)))
+
+
+@router.message(Command("today"))
 @router.message(F.text == MENU_TODAY_WORKOUT)
 @inject
 async def cmd_today(
@@ -36,37 +44,39 @@ async def cmd_today(
     if not user:
         await message.answer(BotTexts.WORKOUTS_REGISTER_FIRST, reply_markup=main_menu())
         return
-    plan = await user_plan_service.create_or_get_active_plan(user.id)
+    plan = await user_plan_service.get_or_create_plan(user.id)
     if not plan:
         await message.answer(BotTexts.PLAN_NO_PLAN, reply_markup=main_menu())
         return
     today = date.today()
     async with uow:
         scheduled = await uow.scheduled_workouts.get_by_plan_and_date(plan.id, today)
-    if not scheduled or not scheduled.template:
+    rows = ordered_lines(scheduled) if scheduled else []
+    if not scheduled or not rows:
         await message.answer(BotTexts.TODAY_NO_WORKOUT, reply_markup=main_menu())
         return
-    lines = [BotTexts.TODAY_HEADER, "", scheduled.template.title, ""]
-    for i, we in enumerate(
-        sorted(scheduled.template.workout_exercises, key=lambda x: x.sort_order),
-        start=1,
-    ):
+    mult = float(scheduled.volume_multiplier or 1.0)
+    lines = [BotTexts.TODAY_HEADER, "", workout_title(scheduled), f"Объём: ×{mult:.1f}", ""]
+    ordered = rows
+    for i, we in enumerate(ordered, start=1):
         name = we.exercise.name if we.exercise else "—"
-        part = f"{we.sets}×{we.reps}" if we.sets and we.reps else ""
-        if we.duration_seconds:
-            part = f"{we.duration_seconds} сек" if not part else f"{part}, {we.duration_seconds} сек"
+        sets = _scaled_int(we.sets, mult)
+        reps = _scaled_int(we.reps, mult)
+        part = ""
+        if sets and reps:
+            part = f"{sets}×{reps}"
+        elif we.duration_seconds:
+            dur = _scaled_int(we.duration_seconds, mult) or we.duration_seconds
+            part = f"{dur} сек"
         lines.append(f"{i}. {name}" + (f" — {part}" if part else ""))
     lines.append("")
-    # Inline-кнопки по одному на упражнение
-    ordered = sorted(
-        scheduled.template.workout_exercises,
-        key=lambda x: x.sort_order,
-    )
     inline_buttons = [
-        [InlineKeyboardButton(
-            text=f"{i}. {we.exercise.name if we.exercise else '—'}",
-            callback_data=f"exercise:{i}",
-        )]
+        [
+            InlineKeyboardButton(
+                text=f"{i}. {we.exercise.name if we.exercise else '—'}",
+                callback_data=f"exercise:{scheduled.id}:{i}",
+            )
+        ]
         for i, we in enumerate(ordered, start=1)
     ]
     reply_markup = InlineKeyboardMarkup(inline_keyboard=inline_buttons)
@@ -75,7 +85,6 @@ async def cmd_today(
         user_id=user.id,
         telegram_id=telegram_id,
         scheduled_workout_id=scheduled.id,
-        template_id=scheduled.template_id,
         exercise_count=len(ordered),
     )
     await message.answer("\n".join(lines), reply_markup=reply_markup)

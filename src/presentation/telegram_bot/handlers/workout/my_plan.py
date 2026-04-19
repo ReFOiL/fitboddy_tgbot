@@ -1,11 +1,13 @@
-"""Команда /myplan — показать план на месяц."""
+"""Мой план: меню и команда /myplan."""
 from __future__ import annotations
 
 from aiogram import F, Router
-from aiogram.types import Message
+from aiogram.filters import Command
+from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup, Message
 from dependency_injector.wiring import Provide, inject
 
 from src.application.interfaces.repositories import UnitOfWork
+from src.application.services.scheduled_workout_lines import workout_title
 from src.application.services.user_plan_service import UserPlanService
 from src.domain.entities.training_plan import TrainingPlan
 from src.presentation.telegram_bot.keyboards.builders import main_menu, MENU_MY_PLAN
@@ -15,15 +17,20 @@ from src.shared.di import Container
 router = Router()
 
 
-def _format_plan(plan: TrainingPlan) -> str:
+def _format_plan(plan: TrainingPlan) -> tuple[str, InlineKeyboardMarkup | None]:
     lines = [BotTexts.PLAN_HEADER, ""]
+    rows: list[list[InlineKeyboardButton]] = []
     for sw in sorted(plan.scheduled_workouts, key=lambda x: x.scheduled_for):
-        title = sw.template.title if sw.template else "—"
+        title = workout_title(sw)
         done = " ✅" if sw.is_completed else ""
         lines.append(f"{sw.scheduled_for:%d.%m} — {title}{done}")
-    return "\n".join(lines)
+        label = f"{sw.scheduled_for:%d.%m} {title}"[:60]
+        rows.append([InlineKeyboardButton(text=label, callback_data=f"workout:{sw.id}")])
+    markup = InlineKeyboardMarkup(inline_keyboard=rows) if rows else None
+    return "\n".join(lines), markup
 
 
+@router.message(Command("myplan"))
 @router.message(F.text == MENU_MY_PLAN)
 @inject
 async def cmd_myplan(
@@ -40,8 +47,9 @@ async def cmd_myplan(
     if not user:
         await message.answer(BotTexts.WORKOUTS_REGISTER_FIRST, reply_markup=main_menu())
         return
-    plan = await user_plan_service.create_or_get_active_plan(user.id)
+    plan = await user_plan_service.get_or_create_plan(user.id)
     if not plan:
         await message.answer(BotTexts.PLAN_NO_PLAN, reply_markup=main_menu())
         return
-    await message.answer(_format_plan(plan), reply_markup=main_menu())
+    text, markup = _format_plan(plan)
+    await message.answer(text, reply_markup=markup or main_menu())

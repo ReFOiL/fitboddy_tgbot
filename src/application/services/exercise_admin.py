@@ -16,6 +16,7 @@ class ExerciseUpdates(TypedDict, total=False):
     equipment: str | None
     is_cardio: bool
     difficulty: int
+    workout_category: str
     muscle_ids: list[int]
     contraindication_ids: list[int]
 
@@ -63,6 +64,7 @@ class ExerciseAdminService:
         is_cardio: bool = False,
         difficulty: int = 1,
         contraindication_ids: list[int] | None = None,
+        workout_category: str = "full_body",
     ) -> Exercise:
         async with self._uow:
             existing = await self._uow.exercises.get_by_name(name)
@@ -77,6 +79,7 @@ class ExerciseAdminService:
                 equipment=equipment,
                 is_cardio=is_cardio,
                 difficulty=difficulty,
+                workout_category=workout_category,
             )
             exercise.muscles = muscles
             exercise.contraindications = contras

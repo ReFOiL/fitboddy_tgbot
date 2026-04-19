@@ -6,7 +6,7 @@ from dependency_injector.wiring import Provide, inject
 
 from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.exercise_controller import ExerciseController
-from src.presentation.web_admin.workout_schemas import (
+from src.presentation.web_admin.admin_schemas import (
     ExerciseCreate,
     ExerciseOut,
     ExerciseUpdate,

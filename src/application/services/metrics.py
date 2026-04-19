@@ -8,10 +8,6 @@ bot_messages_total = Counter(
     "Количество сообщений бота по командам",
     ["command"],
 )
-workouts_generated_total = Counter(
-    "workouts_generated_total",
-    "Количество сгенерированных тренировок",
-)
 payments_successful_total = Counter(
     "payments_successful_total",
     "Успешные платежи",

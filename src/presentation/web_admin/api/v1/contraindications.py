@@ -6,7 +6,7 @@ from dependency_injector.wiring import Provide, inject
 
 from src.presentation.web_admin.auth import AdminPrincipal, get_current_admin
 from src.presentation.web_admin.contraindication_controller import ContraindicationController
-from src.presentation.web_admin.workout_schemas import (
+from src.presentation.web_admin.admin_schemas import (
     ContraindicationCreate,
     ContraindicationOut,
     ContraindicationUpdate,
