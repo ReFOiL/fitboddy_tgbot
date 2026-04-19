@@ -12,13 +12,12 @@ class AnswerType(str, enum.Enum):
 
 
 class SystemQuestionType(str, enum.Enum):
+    """Логические ключи системной анкеты (суффикс после «system:» в БД)."""
+
     GOAL = "goal"
     LEVEL = "level"
-    EQUIPMENT = "equipment"
-    GENDER = "gender"
-    AGE = "age"
-    HEIGHT = "height"
-    WEIGHT = "weight"
-    ACTIVITY = "activity"
-    WORKOUTS_PER_WEEK = "workouts_per_week"
     WORKOUT_LOCATION = "workout_location"
+    EQUIPMENT = "equipment"
+    WORKOUTS_PER_WEEK = "workouts_per_week"
+    AGE = "age"
+    GENDER = "gender"

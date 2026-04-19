@@ -65,8 +65,8 @@ class UserAnswerExtractor:
             else:
                 equipment_names = [str(answer.value)]
         
-        # Фильтруем "none"
-        return [name for name in equipment_names if name != "none"]
+        # «Нет оборудования» и «другое» не мапятся на справочник equipment
+        return [name for name in equipment_names if name not in ("none", "other")]
 
 
 class AnswerLookupMixin(UserAnswerExtractor):

@@ -21,8 +21,8 @@ class CustomQuestion(Base):
     """
     Вопросы анкеты (системные и кастомные).
     
-    Системные вопросы (is_system=True):
-    - system:goal, system:level, system:gender, system:equipment и т.д.
+    Системные вопросы (is_system=True), ключи вида system:*:
+    - MVP: goal, level, workout_location, equipment, workouts_per_week, age, gender.
     - Используются для фильтрации и матчинга тренировок
     - Не могут быть удалены через админку
     

@@ -93,7 +93,6 @@ class SmartWorkoutMatcher:
         await builder.with_difficulty()
         await builder.with_equipment()
         await builder.with_home_friendly()
-        await builder.with_intensity()
         await builder.with_age()
         specification = await builder.build()
         if not specification:
