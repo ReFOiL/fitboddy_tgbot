@@ -27,6 +27,7 @@ from src.domain.entities import (  # noqa: E402,F401
     training_plan,
     user,
     user_answer,
+    workout_feedback,
 )
 
 config = context.config

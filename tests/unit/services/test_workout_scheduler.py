@@ -4,7 +4,8 @@ from __future__ import annotations
 import pytest
 from datetime import date, timedelta
 
-from src.application.services.workout_scheduler import PlannedExerciseLine, WorkoutScheduler
+from src.application.workout.scheduler import WorkoutScheduler
+from src.application.workout.scheduler.models import PlannedExerciseLine
 from src.domain.entities.exercise import Exercise
 
 
@@ -53,13 +54,13 @@ class TestWorkoutScheduler:
     def test_selects_anchor_count(
         self, scheduler: WorkoutScheduler, sample_exercises: list[Exercise]
     ) -> None:
-        anchors = scheduler._select_weekly_anchor_exercises(sample_exercises, 3, week=1)
+        anchors = scheduler._anchor_selection.select(sample_exercises, 3, week=1)
         assert len(anchors) == 3
 
     def test_round_robin_by_category(
         self, scheduler: WorkoutScheduler, sample_exercises: list[Exercise]
     ) -> None:
-        anchors = scheduler._select_weekly_anchor_exercises(sample_exercises, 3, week=1)
+        anchors = scheduler._anchor_selection.select(sample_exercises, 3, week=1)
         cats = [getattr(e, "workout_category", "") for e in anchors]
         assert len(set(cats)) >= 2
 
@@ -99,5 +100,5 @@ class TestWorkoutScheduler:
             )
             for i in range(1, 4)
         ]
-        anchors = scheduler._select_weekly_anchor_exercises(exercises, 3, week=1)
+        anchors = scheduler._anchor_selection.select(exercises, 3, week=1)
         assert len(anchors) == 3

@@ -29,6 +29,12 @@ class User(Base):
     profile_completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cached_tdee: Mapped[float | None] = mapped_column(Float, nullable=True)
     cached_bmi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    training_load_multiplier: Mapped[float] = mapped_column(
+        Float,
+        default=1.0,
+        server_default="1.0",
+        doc="Адаптивный множитель к подходам/повторам при генерации плана (0.7–1.5).",
+    )
 
     # Все данные профиля (gender, equipment, goal, level и т.д.) хранятся в UserAnswer
     # Это единственный источник истины - никакой денормализации!

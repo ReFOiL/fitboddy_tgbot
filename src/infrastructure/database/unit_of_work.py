@@ -16,6 +16,7 @@ from src.infrastructure.database.repositories.training_plan import TrainingPlanR
 from src.infrastructure.database.repositories.scheduled_workout import ScheduledWorkoutRepository
 from src.infrastructure.database.repositories.admin_account import AdminAccountRepository
 from src.infrastructure.database.repositories.equipment import EquipmentRepository
+from src.infrastructure.database.repositories.workout_feedback import WorkoutFeedbackRepository
 from src.domain.entities.base import Base
 
 
@@ -37,6 +38,7 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
         self.custom_questions = CustomQuestionRepository(self._session)
         self.user_answers = UserAnswerRepository(self._session)
         self.equipment = EquipmentRepository(self._session)
+        self.workout_feedback = WorkoutFeedbackRepository(self._session)
         return self
 
     async def __aexit__(

@@ -73,6 +73,11 @@ class ITrainingPlanRepository(Protocol):
     async def archive_active_for_user(self, user_id: int) -> None: ...
 
 
+class IWorkoutFeedbackRepository(Protocol):
+    async def upsert(self, user_id: int, scheduled_workout_id: int, difficulty: str) -> None: ...
+    async def list_last_difficulties(self, user_id: int, *, limit: int = 3) -> list[str]: ...
+
+
 class IScheduledWorkoutRepository(Protocol):
     async def add(self, scheduled: ScheduledWorkout) -> None: ...
     async def add_many(self, items: list[ScheduledWorkout]) -> None: ...
@@ -123,6 +128,7 @@ class UnitOfWork(Protocol):
     custom_questions: ICustomQuestionRepository
     user_answers: IUserAnswerRepository
     equipment: IEquipmentRepository
+    workout_feedback: IWorkoutFeedbackRepository
 
     async def __aenter__(self) -> Self: ...
     async def __aexit__(

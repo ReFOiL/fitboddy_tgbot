@@ -38,7 +38,16 @@ from src.domain.questionnaire import (
 from src.domain.value_objects.questionnaire import AnswerType
 from src.application.services.subscription import PremiumAccess, SubscriptionService
 from src.application.use_cases.payment.cryptobot import CryptoBotPaymentUseCase
-from src.application.services.workout_scheduler import WorkoutScheduler
+from src.application.use_cases.workout.callback_use_cases import WorkoutCallbackUseCases
+from src.application.workout.scheduler.service import WorkoutScheduler
+from src.application.workout.scheduler.policies import (
+    RecoveryPolicy,
+    WeeklyPatternPolicy,
+)
+from src.application.workout.scheduler.strategies import (
+    AnchorSelectionStrategy,
+    SessionCompositionStrategy,
+)
 from src.application.services.training_plan_generator import TrainingPlanGenerator
 from src.application.services.user_plan_service import UserPlanService
 from src.application.services.training_plan_admin import TrainingPlanAdminService
@@ -131,12 +140,29 @@ class Container(containers.DeclarativeContainer):
         notification_service=notification_service,
     )
 
-    workout_scheduler = providers.Singleton(WorkoutScheduler)
+    weekly_pattern_policy = providers.Singleton(WeeklyPatternPolicy)
+    recovery_policy = providers.Singleton(RecoveryPolicy)
+    anchor_selection_strategy = providers.Singleton(AnchorSelectionStrategy)
+    session_composition_strategy = providers.Singleton(
+        SessionCompositionStrategy,
+        recovery_policy=recovery_policy,
+    )
+    workout_scheduler = providers.Singleton(
+        WorkoutScheduler,
+        weekly_pattern_policy=weekly_pattern_policy,
+        anchor_selection_strategy=anchor_selection_strategy,
+        recovery_policy=recovery_policy,
+        session_composition_strategy=session_composition_strategy,
+    )
     training_plan_generator = providers.Factory(TrainingPlanGenerator, scheduler=workout_scheduler)
     user_plan_service = providers.Factory(
         UserPlanService,
         uow=uow,
         plan_generator=training_plan_generator,
+    )
+    workout_callback_use_cases = providers.Factory(
+        WorkoutCallbackUseCases,
+        uow=uow,
     )
 
     text_validator = providers.Factory(TextValidator)

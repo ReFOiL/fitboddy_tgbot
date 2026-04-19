@@ -11,7 +11,7 @@ from src.domain.value_objects.questionnaire import AnswerType
 class WorkoutMvpFixturesSeeder:
     """
     Фикстуры для MVP тренировок:
-    - каталог из 50 упражнений (категории для планировщика; много вариантов без инвентаря)
+    - каталог из 60 упражнений (категории для планировщика; много вариантов без инвентаря)
     - video_url как ключ для MinIO (заглушки)
     """
 
@@ -79,6 +79,16 @@ class WorkoutMvpFixturesSeeder:
         ("Скалолаз к локтю", "Колено к противоположному локтю.", "videos/demo/cross_body_mountain_climber.mp4", ["core", "obliques"], "none", 2, True, [], "cardio"),
         ("Боковой шаг", "Низкие шаги в сторону.", "videos/demo/side_shuffle.mp4", ["quadriceps", "glutes", "calves"], "none", 1, True, [], "cardio"),
         ("Звёздный прыжок", "Прыжок «звезда».", "videos/demo/star_jump.mp4", ["full_body"], "none", 2, True, [], "cardio"),
+        ("Отжимания с колен", "Упрощённые отжимания.", "videos/demo/knee_pushup.mp4", ["chest", "triceps"], "none", 1, False, [], "upper"),
+        ("Дипы на трицепс с пола", "Разгибание из упора лёжа.", "videos/demo/tricep_pushup_floor.mp4", ["triceps", "chest"], "none", 2, False, [], "upper"),
+        ("Ягодичный мост одной ногой", "Мост с вытянутой ногой.", "videos/demo/single_leg_bridge.mp4", ["glutes", "hamstrings", "core"], "none", 2, False, [], "lower"),
+        ("Подъём на носки стоя", "Икры без веса.", "videos/demo/calf_raise.mp4", ["calves"], "none", 1, False, [], "lower"),
+        ("Скручивание лёжа", "Классический подъём корпуса.", "videos/demo/crunch.mp4", ["core"], "none", 1, False, [], "full_body"),
+        ("Подъём таза лёжа", "Мост с акцентом на ягодицы.", "videos/demo/hip_thrust_floor.mp4", ["glutes", "core"], "none", 1, False, [], "lower"),
+        ("Отведение ноги назад стоя", "Ягодица без веса.", "videos/demo/kickback_glute.mp4", ["glutes", "back"], "none", 1, False, [], "lower"),
+        ("Шраги без веса", "Сжатие плеч к ушам.", "videos/demo/bodyweight_shrug.mp4", ["traps", "shoulders"], "none", 1, False, [], "upper"),
+        ("Мёртвый жук", "Разгибание противоположных конечностей.", "videos/demo/dead_bug.mp4", ["core", "hip_flexors"], "none", 1, False, [], "full_body"),
+        ("Планка с касанием плеч", "Перенос веса на одну руку.", "videos/demo/plank_shoulder_tap.mp4", ["core", "shoulders"], "none", 2, False, [], "full_body"),
     ]
 
     async def _get_or_create_muscle(self, name: str) -> Muscle:
