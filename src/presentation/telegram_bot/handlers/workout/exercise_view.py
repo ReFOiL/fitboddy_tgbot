@@ -103,7 +103,7 @@ async def exercise_callback(
     if data.exercise.video_url and data.exercise.video_url.startswith("videos/"):
         try:
             video_url = await video_storage.get_video_url(data.exercise.video_url)
-        except (OSError, ValueError) as e:
+        except Exception as e:
             logger.warning(
                 "bot.exercise.video_url_failed",
                 user_id=data.user_id,
@@ -133,11 +133,24 @@ async def exercise_callback(
         ]
     )
     if video_url:
-        await callback.message.answer_video(
-            video=video_url,
-            caption=text,
-            reply_markup=replace_markup,
-        )
+        try:
+            await callback.message.answer_video(
+                video=video_url,
+                caption=text,
+                reply_markup=replace_markup,
+            )
+            return
+        except Exception as e:
+            logger.warning(
+                "bot.exercise.video_send_failed",
+                user_id=data.user_id,
+                exercise_id=data.exercise.id,
+                video_url=video_url,
+                error=str(e),
+            )
+            # Graceful fallback: при недоступном S3/MinIO продолжаем без видео.
+            await callback.message.answer(text, reply_markup=replace_markup)
+            return
     else:
         await callback.message.answer(text, reply_markup=replace_markup)
 
