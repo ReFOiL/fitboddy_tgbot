@@ -19,3 +19,7 @@ class CallbackWorkoutAccessDeniedError(WorkoutCallbackError):
 
 class CallbackWorkoutAlreadyCompletedError(WorkoutCallbackError):
     pass
+
+
+class CallbackExerciseReplacementNotAvailableError(WorkoutCallbackError):
+    pass

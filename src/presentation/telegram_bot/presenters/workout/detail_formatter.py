@@ -12,8 +12,16 @@ class WorkoutDetailFormatter:
     def format_workout(self, scheduled_workout: ScheduledWorkout) -> tuple[str, InlineKeyboardMarkup]:
         title = workout_title(scheduled_workout)
         volume = float(scheduled_workout.volume_multiplier or 1.0)
-        lines = [BotTexts.WORKOUT_DETAIL_HEADER, "", title, f"Объём недели: ×{volume:.1f}", ""]
         ordered = ordered_lines(scheduled_workout)
+        approx_minutes = self._estimate_session_minutes(multiplier=volume, exercise_count=len(ordered))
+        lines = [
+            BotTexts.WORKOUT_DETAIL_HEADER,
+            "",
+            title,
+            f"Объём недели: ×{volume:.1f}",
+            f"Упражнений: {len(ordered)} · Примерно {approx_minutes} мин",
+            "",
+        ]
         for i, workout_exercise in enumerate(ordered, start=1):
             name = workout_exercise.exercise.name if workout_exercise.exercise else "—"
             part = WorkoutLoadFormatter.format_volume_part(
@@ -43,3 +51,9 @@ class WorkoutDetailFormatter:
                 ]
             )
         return "\n".join(lines), InlineKeyboardMarkup(inline_keyboard=rows)
+
+    @staticmethod
+    def _estimate_session_minutes(*, multiplier: float, exercise_count: int) -> int:
+        base_minutes = 5
+        per_exercise_minutes = max(2, int(round(3 * multiplier)))
+        return base_minutes + (exercise_count * per_exercise_minutes)

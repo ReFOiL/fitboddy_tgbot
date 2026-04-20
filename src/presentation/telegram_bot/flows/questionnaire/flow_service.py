@@ -11,6 +11,7 @@ from src.application.services.profile_completion import ProfileCompletionService
 from src.application.services.user_plan_service import UserPlanService
 from src.application.services.user_registration import UserRegistrationService
 from src.domain.questionnaire import Question
+from src.domain.value_objects.questionnaire import AnswerType
 from src.presentation.telegram_bot.flows import (
     BaseFlow,
     EnsureUserMixin,
@@ -76,6 +77,11 @@ class QuestionnaireFlow(BaseFlow, UserContextMixin, EnsureUserMixin, NavigationM
             await self._handle_back(message, state_service, question)
             return
 
+        if question.answer_type == AnswerType.MULTIPLE_CHOICE:
+            handled = await self._handle_multiple_choice(message, state_service, question, text)
+            if handled:
+                return
+
         value, error = self._answer_service.validate(question, text)
         if error:
             await message.answer(error)
@@ -115,28 +121,40 @@ class QuestionnaireFlow(BaseFlow, UserContextMixin, EnsureUserMixin, NavigationM
         navigation = QuestionNavigation(self._queries, state_service)
         include_back = await navigation.has_prev(question.key)
         await state_service.set_current_key(question.key)
-        await self._send_question(message, question, include_back)
+        await state_service.clear_multi_selected_values()
+        await self._send_question(message, state_service, question, include_back)
 
     async def _handle_back(self, message: Message, state_service: QuestionnaireStateService, question: Question) -> None:
         navigation = QuestionNavigation(self._queries, state_service)
         prev_key = await navigation.prev_key(question.key)
         if prev_key is None:
-            await self._send_question(message, question, False)
+            await self._send_question(message, state_service, question, False)
             return
         prev_question = await self._queries.question_by_key(prev_key)
         if prev_question is None:
-            await self._send_question(message, question, False)
+            await self._send_question(message, state_service, question, False)
             return
         await state_service.set_current_key(prev_key)
+        await state_service.clear_multi_selected_values()
         include_back = await navigation.has_prev(prev_key)
         await self._send_question(
             message,
+            state_service,
             prev_question,
             include_back,
         )
 
-    async def _send_question(self, message: Message, question: Question, include_back: bool) -> None:
-        render = self._presenter.render_question(question, include_back)
+    async def _send_question(
+        self,
+        message: Message,
+        state_service: QuestionnaireStateService,
+        question: Question,
+        include_back: bool,
+    ) -> None:
+        selected_values: list[str] | None = None
+        if question.answer_type == AnswerType.MULTIPLE_CHOICE:
+            selected_values = await state_service.get_multi_selected_values()
+        render = self._presenter.render_question(question, include_back, selected_values)
         await message.answer(render.text, reply_markup=render.keyboard)
 
     async def _ensure_db_user_id(
@@ -152,5 +170,62 @@ class QuestionnaireFlow(BaseFlow, UserContextMixin, EnsureUserMixin, NavigationM
             return None
         await state_service.set_user_db_id(user.id)
         return user.id
+
+    async def _handle_multiple_choice(
+        self,
+        message: Message,
+        state_service: QuestionnaireStateService,
+        question: Question,
+        text: str,
+    ) -> bool:
+        options_by_label = {option.label: option.value for option in question.options}
+        normalized_option_map = {
+            self._normalize_multi_option_label(option.label): option.value for option in question.options
+        }
+        selected_values = await state_service.get_multi_selected_values()
+        selected_set = set(selected_values)
+
+        if text.strip() == self._presenter.MULTI_DONE_BUTTON:
+            if question.is_required and not selected_set:
+                await message.answer(BotTexts.QUESTIONNAIRE_MULTI_REQUIRED)
+                return True
+            db_user_id = await state_service.get_user_db_id()
+            if db_user_id is None:
+                db_user_id = await self._ensure_db_user_id(message, state_service)
+            if db_user_id is None:
+                return True
+            saved = await self._answer_service.save(db_user_id, question, sorted(selected_set))
+            if not saved:
+                await message.answer(BotTexts.QUESTIONNAIRE_SAVE_ERROR)
+                return True
+            await state_service.clear_multi_selected_values()
+            await self._next_or_finish(message, state_service)
+            return True
+
+        selected_value = options_by_label.get(text.strip()) or normalized_option_map.get(
+            self._normalize_multi_option_label(text)
+        )
+        if selected_value is None:
+            await message.answer(BotTexts.QUESTIONNAIRE_MULTI_INVALID)
+            return True
+
+        if selected_value in selected_set:
+            selected_set.remove(selected_value)
+        else:
+            selected_set.add(selected_value)
+        await state_service.set_multi_selected_values(sorted(selected_set))
+        include_back = await QuestionNavigation(self._queries, state_service).has_prev(question.key)
+        render = self._presenter.render_question(question, include_back, sorted(selected_set))
+        await message.answer(render.text, reply_markup=render.keyboard)
+        return True
+
+    @staticmethod
+    def _normalize_multi_option_label(text: str) -> str:
+        value = text.strip()
+        if value.startswith("☑️") or value.startswith("⬜"):
+            parts = value.split(" ", 1)
+            if len(parts) == 2:
+                return parts[1].strip()
+        return value
 
 

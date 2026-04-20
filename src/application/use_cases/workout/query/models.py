@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from src.application.workout.plan_management.models import WorkoutCycleProgressSummary
 from src.domain.entities.exercise import Exercise
 from src.domain.entities.training_plan import ScheduledWorkout, ScheduledWorkoutExercise, TrainingPlan
+from src.domain.value_objects.workout_profile import ReflectionEnergy
 
 @dataclass(slots=True)
 class MyPlanViewData:
@@ -12,6 +13,8 @@ class MyPlanViewData:
     telegram_id: int
     plan: TrainingPlan
     progress: WorkoutCycleProgressSummary | None = None
+    recent_difficulties: list[str] | None = None
+    recent_energies: list[ReflectionEnergy] | None = None
 
 
 @dataclass(slots=True)

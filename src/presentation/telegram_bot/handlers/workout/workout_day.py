@@ -46,8 +46,16 @@ async def cmd_today(
         await message.answer(BotTexts.TODAY_NO_WORKOUT, reply_markup=main_menu())
         return
     mult = float(data.scheduled.volume_multiplier or 1.0)
-    lines = [BotTexts.TODAY_HEADER, "", workout_title(data.scheduled), f"Объём: ×{mult:.1f}", ""]
     ordered = data.rows
+    approx_minutes = _estimate_session_minutes(multiplier=mult, exercise_count=len(ordered))
+    lines = [
+        BotTexts.TODAY_HEADER,
+        "",
+        workout_title(data.scheduled),
+        f"Объём: ×{mult:.1f}",
+        f"Упражнений: {len(ordered)} · Примерно {approx_minutes} мин",
+        "",
+    ]
     for i, we in enumerate(ordered, start=1):
         name = we.exercise.name if we.exercise else "—"
         part = WorkoutLoadFormatter.format_volume_part(
@@ -57,7 +65,7 @@ async def cmd_today(
             multiplier=mult,
         )
         lines.append(f"{i}. {name}" + (f" — {part}" if part else ""))
-    lines.append("")
+    lines.extend(["", "Нажмите на упражнение ниже, чтобы открыть детали и технику."])
     inline_buttons = [
         [
             InlineKeyboardButton(
@@ -76,3 +84,10 @@ async def cmd_today(
         exercise_count=len(ordered),
     )
     await message.answer("\n".join(lines), reply_markup=reply_markup)
+
+
+def _estimate_session_minutes(*, multiplier: float, exercise_count: int) -> int:
+    # Грубая оценка помогает пользователю заранее спланировать окно под тренировку.
+    base_minutes = 5
+    per_exercise_minutes = max(2, int(round(3 * multiplier)))
+    return base_minutes + (exercise_count * per_exercise_minutes)

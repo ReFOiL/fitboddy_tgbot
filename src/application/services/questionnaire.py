@@ -4,6 +4,9 @@ from src.application.factories.answer_builder_factory import AnswerBuilderFactor
 from src.application.interfaces.repositories import UnitOfWork
 from src.domain.entities.user_answer import UserAnswer
 from src.domain.questionnaire import AnswerValidator, Question, QuestionFactory
+from src.domain.value_objects.questionnaire_system import SystemQuestionKey
+from src.domain.value_objects.workout_profile import WorkoutLocation
+from src.shared.utils.profile_answers import AnswerLookup
 
 
 class QuestionnaireService:
@@ -26,8 +29,11 @@ class QuestionnaireService:
     ) -> tuple[Question | None, bool]:
         async with self.uow:
             answered_keys = await self.uow.user_answers.get_answered_keys(user_id)
+            answers = await self.uow.user_answers.list_by_user_id(user_id)
             questions = await self.uow.custom_questions.list_active_ordered()
             for question in questions:
+                if self._should_skip_question(question.key, answers):
+                    continue
                 if question.key not in answered_keys:
                     return self._factory.from_entity(question), False
         return None, True
@@ -71,3 +77,10 @@ class QuestionnaireService:
         text: str,
     ) -> tuple[str | int | bool | list[str] | None, str | None]:
         return self._validator.validate(question, text)
+
+    @staticmethod
+    def _should_skip_question(question_key: str, user_answers: list[UserAnswer]) -> bool:
+        if question_key != SystemQuestionKey.EQUIPMENT:
+            return False
+        location_raw = AnswerLookup(user_answers).get_str(SystemQuestionKey.WORKOUT_LOCATION)
+        return WorkoutLocation.from_raw(location_raw) == WorkoutLocation.GYM

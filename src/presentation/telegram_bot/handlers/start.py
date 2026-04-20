@@ -24,3 +24,4 @@ async def start_handler(
     await user_service.ensure_user(message.from_user.id, message.from_user.username)
     await message.answer(BotTexts.START_WELCOME, reply_markup=main_menu())
 
+

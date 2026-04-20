@@ -9,7 +9,7 @@ from src.domain.value_objects.workout_profile import (
     TrainingLevel,
     WorkoutLocation,
 )
-from src.shared.utils.profile_answers import AnswerLookup, UserAnswerExtractor
+from src.shared.utils.profile_answers import AnswerLookup
 
 
 class ExerciseMatchingProfileFactory:
@@ -28,11 +28,9 @@ class ExerciseMatchingProfileFactory:
         user_answers: list[UserAnswer], *, workout_location: WorkoutLocation | None
     ) -> set[EquipmentName]:
         names: set[EquipmentName] = {EquipmentName.NONE}
-        answer = UserAnswerExtractor.find_by_question_key(
-            user_answers, SystemQuestionKey.EQUIPMENT
-        )
-        if answer:
-            for equipment_name in UserAnswerExtractor.extract_equipment_names(answer):
+        equipment_names = AnswerLookup(user_answers).get_str_list(SystemQuestionKey.EQUIPMENT)
+        if equipment_names:
+            for equipment_name in equipment_names:
                 parsed = EquipmentName.from_raw(equipment_name)
                 if parsed is not None:
                     names.add(parsed)

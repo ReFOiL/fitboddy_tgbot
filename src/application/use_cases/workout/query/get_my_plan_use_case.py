@@ -17,7 +17,7 @@ from src.application.workout.planning import (
     PlanningDefaultsPolicy,
 )
 from src.domain.value_objects.questionnaire_system import SystemQuestionKey
-from src.domain.value_objects.workout_profile import TrainingGoal
+from src.domain.value_objects.workout_profile import ReflectionEnergy, TrainingGoal
 from src.shared.utils.profile_answers import AnswerLookup
 
 class GetMyPlanUseCase:
@@ -36,7 +36,15 @@ class GetMyPlanUseCase:
         if plan is None:
             raise WorkoutQueryPlanNotFound()
         progress = await self._build_progress_summary(user.id, plan.id)
-        return MyPlanViewData(user_id=user.id, telegram_id=tg_user_id, plan=plan, progress=progress)
+        recent_difficulties, recent_energies = await self._build_feedback_signals(user.id)
+        return MyPlanViewData(
+            user_id=user.id,
+            telegram_id=tg_user_id,
+            plan=plan,
+            progress=progress,
+            recent_difficulties=recent_difficulties,
+            recent_energies=recent_energies,
+        )
 
     def _record_retention_signal(self, created_at: datetime) -> None:
         created_at_utc = (
@@ -82,3 +90,11 @@ class GetMyPlanUseCase:
                 phase=phase.name,
                 workouts_per_week=workouts_per_week,
             )
+
+    async def _build_feedback_signals(
+        self, user_id: int
+    ) -> tuple[list[str], list[ReflectionEnergy]]:
+        async with self._uow:
+            recent_difficulties = await self._uow.workout_feedback.list_last_difficulties(user_id, limit=3)
+            recent_energies = await self._uow.workout_reflections.list_last_energy_levels(user_id, limit=3)
+        return recent_difficulties, recent_energies

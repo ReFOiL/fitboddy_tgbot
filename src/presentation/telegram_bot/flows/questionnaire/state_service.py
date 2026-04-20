@@ -7,6 +7,7 @@ class QuestionnaireStateService:
     _CURRENT_KEY = "current_question_key"
     _ORDERED_KEYS = "ordered_question_keys"
     _USER_DB_ID = "user_db_id"
+    _MULTI_SELECTED = "multi_selected_values"
 
     def __init__(self, state: FSMContext) -> None:
         self._state = state
@@ -39,3 +40,16 @@ class QuestionnaireStateService:
         data = await self._state.get_data()
         raw = data.get(self._USER_DB_ID)
         return int(raw) if isinstance(raw, int) else None
+
+    async def set_multi_selected_values(self, values: list[str]) -> None:
+        await self._state.update_data(multi_selected_values=values)
+
+    async def get_multi_selected_values(self) -> list[str]:
+        data = await self._state.get_data()
+        raw = data.get(self._MULTI_SELECTED)
+        if isinstance(raw, list):
+            return [str(item) for item in raw if isinstance(item, str)]
+        return []
+
+    async def clear_multi_selected_values(self) -> None:
+        await self._state.update_data(multi_selected_values=[])
