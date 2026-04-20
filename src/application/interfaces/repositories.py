@@ -15,6 +15,7 @@ from src.domain.entities.muscle import Muscle
 from src.domain.entities.contraindication import Contraindication
 from src.domain.entities.equipment import Equipment
 from src.domain.entities.base import Base
+from src.domain.value_objects.workout_profile import PerceivedEffort, ReflectionEnergy
 
 
 class IAdminAccountRepository(Protocol):
@@ -78,6 +79,15 @@ class IWorkoutFeedbackRepository(Protocol):
     async def list_last_difficulties(self, user_id: int, *, limit: int = 3) -> list[str]: ...
 
 
+class IWorkoutReflectionRepository(Protocol):
+    async def upsert(
+        self, user_id: int, scheduled_workout_id: int, energy: ReflectionEnergy
+    ) -> None: ...
+    async def list_last_energy_levels(
+        self, user_id: int, *, limit: int = 5
+    ) -> list[ReflectionEnergy]: ...
+
+
 class IScheduledWorkoutRepository(Protocol):
     async def add(self, scheduled: ScheduledWorkout) -> None: ...
     async def add_many(self, items: list[ScheduledWorkout]) -> None: ...
@@ -85,7 +95,7 @@ class IScheduledWorkoutRepository(Protocol):
     async def get_by_id(self, scheduled_id: int) -> ScheduledWorkout | None: ...
     async def list_by_plan_id(self, plan_id: int) -> list[ScheduledWorkout]: ...
     async def mark_completed(self, scheduled_id: int) -> None: ...
-    async def set_perceived_effort(self, scheduled_id: int, effort: str) -> None: ...
+    async def set_perceived_effort(self, scheduled_id: int, effort: PerceivedEffort) -> None: ...
     async def has_other_on_plan_date(
         self, plan_id: int, on_date: date, exclude_scheduled_id: int
     ) -> bool: ...
@@ -129,6 +139,7 @@ class UnitOfWork(Protocol):
     user_answers: IUserAnswerRepository
     equipment: IEquipmentRepository
     workout_feedback: IWorkoutFeedbackRepository
+    workout_reflections: IWorkoutReflectionRepository
 
     async def __aenter__(self) -> Self: ...
     async def __aexit__(

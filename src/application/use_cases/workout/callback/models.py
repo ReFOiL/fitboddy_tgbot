@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from src.domain.entities.training_plan import ScheduledWorkout
-from src.domain.value_objects.workout_profile import PerceivedEffort
+from src.domain.value_objects.workout_profile import PerceivedEffort, ReflectionEnergy
 
 
 @dataclass(slots=True)
@@ -29,3 +29,10 @@ class SaveEffortRequest:
     tg_user_id: int
     scheduled_id: int
     level: PerceivedEffort
+
+
+@dataclass(slots=True)
+class SaveReflectionRequest:
+    tg_user_id: int
+    scheduled_id: int
+    energy: ReflectionEnergy

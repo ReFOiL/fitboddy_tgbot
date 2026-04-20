@@ -27,6 +27,7 @@ from src.application.workout.scheduler.strategies import (
     SessionCompositionStrategy,
 )
 from src.domain.entities.exercise import Exercise
+from src.domain.value_objects.workout_profile import TrainingGoal, TrainingLevel
 
 logger = structlog.get_logger()
 
@@ -63,7 +64,10 @@ class WorkoutScheduler(AbstractWorkoutScheduler):
 
         result: list[ScheduledSessionItem] = []
         for week in range(1, request.weeks + 1):
-            week_volume = WEEKLY_VOLUME_BY_WEEK.get(week, 1.3)
+            weekly_volume = request.weekly_volume_by_week or WEEKLY_VOLUME_BY_WEEK
+            week_volume = weekly_volume.get(week, 1.3) * request.readiness_multiplier
+            if request.adherence_score <= 0.45:
+                week_volume = round(week_volume * 0.9, 3)
             week_start = request.start_date + timedelta(days=(week - 1) * 7)
             offsets = self._weekly_pattern.choose_offsets(
                 WeeklyPatternRequest(
@@ -92,18 +96,28 @@ class WorkoutScheduler(AbstractWorkoutScheduler):
                         slot_index=slot_index,
                         week=week,
                         goal=request.goal,
+                        level=request.level,
+                        is_first_plan=request.is_first_plan,
                         variation_seed=request.variation_seed,
                         recent_groups=recent_groups,
                     )
                 )
-                lines = [self._prescribe(ex, sort_order=i + 1) for i, ex in enumerate(recipe.exercises)]
-                final_volume = round(
-                    week_volume
-                    * self._recovery_penalty.calculate_penalty(
+                lines = [
+                    self._prescribe(
+                        ex,
+                        sort_order=i + 1,
+                        goal=request.goal,
+                        training_level=request.level,
+                        is_first_plan=request.is_first_plan,
+                    )
+                    for i, ex in enumerate(recipe.exercises)
+                ]
+                penalty = 1.0
+                if request.goal is not None:
+                    penalty = self._recovery_penalty.calculate_penalty(
                         RecoveryPenaltyRequest(recent_groups=recent_groups, exercises=recipe.exercises)
-                    ),
-                    3,
-                )
+                    )
+                final_volume = round(week_volume * penalty, 3)
 
                 result.append(
                     ScheduledSessionItem(
@@ -123,21 +137,51 @@ class WorkoutScheduler(AbstractWorkoutScheduler):
         )
 
     @staticmethod
-    def _prescribe(exercise: Exercise, sort_order: int) -> PlannedExerciseLine:
+    def _prescribe(
+        exercise: Exercise,
+        sort_order: int,
+        *,
+        goal: TrainingGoal | None,
+        training_level: TrainingLevel | None,
+        is_first_plan: bool,
+    ) -> PlannedExerciseLine:
+        is_beginner_profile = training_level == TrainingLevel.BEGINNER or goal == TrainingGoal.REHABILITATION
+        is_advanced_profile = training_level == TrainingLevel.ADVANCED and goal == TrainingGoal.MUSCLE_GAIN
         if exercise.is_cardio:
+            duration = 40
+            rest = 30
+            sets = 3
+            if is_first_plan and is_beginner_profile:
+                duration = 30
+                rest = 45
+                sets = 2
+            elif is_advanced_profile and not is_first_plan:
+                duration = 50
+                rest = 30
             return PlannedExerciseLine(
                 exercise=exercise,
                 sort_order=sort_order,
-                sets=3,
+                sets=sets,
                 reps=None,
-                duration_seconds=40,
-                rest_seconds=30,
+                duration_seconds=duration,
+                rest_seconds=rest,
             )
+        sets = 3
+        reps = 10
+        rest = 60
+        if is_first_plan and is_beginner_profile:
+            sets = 2
+            reps = 8
+            rest = 75
+        elif is_advanced_profile and not is_first_plan:
+            sets = 4
+            reps = 8
+            rest = 90
         return PlannedExerciseLine(
             exercise=exercise,
             sort_order=sort_order,
-            sets=3,
-            reps=10,
+            sets=sets,
+            reps=reps,
             duration_seconds=None,
-            rest_seconds=60,
+            rest_seconds=rest,
         )

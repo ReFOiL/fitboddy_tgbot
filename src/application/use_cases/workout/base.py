@@ -5,13 +5,13 @@ from typing import Awaitable, Callable, TypeVar
 
 import structlog
 
-from src.application.services import metrics as app_metrics
+from src.application.services.metrics import (
+    workout_use_case_duration_seconds,
+    workout_use_case_failures_total,
+    workout_use_case_runs_total,
+)
 
 logger = structlog.get_logger()
-
-workout_use_case_runs_total = getattr(app_metrics, "workout_use_case_runs_total")
-workout_use_case_failures_total = getattr(app_metrics, "workout_use_case_failures_total")
-workout_use_case_duration_seconds = getattr(app_metrics, "workout_use_case_duration_seconds")
 
 ResultT = TypeVar("ResultT")
 

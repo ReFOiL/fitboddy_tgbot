@@ -9,6 +9,7 @@ from datetime import date, datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from src.domain.entities.training_plan import TrainingPlanStatus
+from src.domain.value_objects.workout_profile import PerceivedEffort
 
 
 class MessageOut(BaseModel):
@@ -151,10 +152,9 @@ class ScheduledWorkoutUpdate(BaseModel):
     volume_multiplier: float | None = Field(default=None, ge=0.1, le=10.0)
     is_completed: bool | None = None
     completed_at: datetime | None = None
-    perceived_effort: str | None = Field(
+    perceived_effort: PerceivedEffort | None = Field(
         default=None,
-        max_length=16,
-        description="easy | ok | hard; пустая строка — сброс",
+        description="easy | ok | hard; null — сброс",
     )
 
 
@@ -169,7 +169,7 @@ class ScheduledWorkoutOut(BaseModel):
     volume_multiplier: float
     is_completed: bool
     completed_at: datetime | None
-    perceived_effort: str | None = None
+    perceived_effort: PerceivedEffort | None = None
 
     session_exercises: list[ScheduledWorkoutExerciseOut] = Field(default_factory=list)
 
@@ -196,3 +196,44 @@ class SessionExerciseLineIn(BaseModel):
 
 class ReplaceSessionExercisesIn(BaseModel):
     exercises: list[SessionExerciseLineIn] = Field(..., min_length=1)
+
+
+class WorkoutAnalyticsSummaryOut(BaseModel):
+    users_total: int
+    users_with_profile: int
+    users_with_2_cycles: int
+    d7_retention_rate: float
+    d30_retention_rate: float
+    avg_cycle_completion_rate: float
+    avg_adherence_score: float
+    avg_novelty_ratio: float
+    plans_generated_last_30_days: int
+    workouts_completed_last_7_days: int
+    plans_generated_this_week: int
+    plans_generated_prev_week: int
+    workouts_completed_this_week: int
+    workouts_completed_prev_week: int
+    retention_cohorts: list["WorkoutRetentionCohortOut"]
+    cycle_funnel: list["WorkoutCycleFunnelStepOut"]
+    alerts: list["WorkoutAnalyticsAlertOut"]
+
+
+class WorkoutRetentionCohortOut(BaseModel):
+    cohort_week: str
+    users_count: int
+    d7_rate: float
+    d30_rate: float
+
+
+class WorkoutCycleFunnelStepOut(BaseModel):
+    step_key: str
+    title: str
+    users_count: int
+    conversion_from_prev: float
+
+
+class WorkoutAnalyticsAlertOut(BaseModel):
+    code: str
+    severity: str
+    title: str
+    description: str

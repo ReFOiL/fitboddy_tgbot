@@ -56,14 +56,19 @@ from src.application.workout.scheduler.strategies import (
     SessionCompositionStrategy,
 )
 from src.application.workout.planning import (
+    AdherenceScorePolicy,
+    GoalPhaseProgressionPolicy,
     LoadScalingPolicy,
     PlanVariationSeedFactory,
     PlanningContextFactory,
+    PlanningDefaultsPolicy,
+    ReflectionReadinessPolicy,
 )
 from src.application.workout.plan_management import ActivePlanPolicy, UserPlanOrchestrator
 from src.application.services.training_plan_generator import TrainingPlanGenerator
 from src.application.services.user_plan_service import UserPlanService
 from src.application.services.training_plan_admin import TrainingPlanAdminService
+from src.application.services.workout_analytics_admin import WorkoutAnalyticsAdminService
 from src.presentation.telegram_bot.flows.questionnaire.flow_service import QuestionnaireFlow
 from src.presentation.telegram_bot.flows.questionnaire.presenter import QuestionnairePresenter
 from src.presentation.telegram_bot.flows.workouts.flow_service import WorkoutsFlow
@@ -80,6 +85,7 @@ from src.presentation.web_admin.muscle_controller import MuscleController
 from src.presentation.web_admin.contraindication_controller import ContraindicationController
 from src.presentation.web_admin.equipment_controller import EquipmentController
 from src.presentation.web_admin.training_plan_admin_controller import TrainingPlanAdminController
+from src.presentation.web_admin.workout_analytics_controller import WorkoutAnalyticsController
 from src.infrastructure.cache.redis_repository import RedisCache
 from src.infrastructure.database.session import create_engine, create_session_factory
 from src.infrastructure.database.unit_of_work import SQLAlchemyUnitOfWork
@@ -99,6 +105,7 @@ class Container(containers.DeclarativeContainer):
     questionnaire_flow: providers.Provider[QuestionnaireFlow]
     workouts_flow: providers.Provider[WorkoutsFlow]
     user_controller: providers.Provider[UserController]
+    workout_analytics_controller: providers.Provider[WorkoutAnalyticsController]
     premium_access: providers.Provider[PremiumAccess]
     wiring_config = containers.WiringConfiguration(
         packages=["src.presentation.telegram_bot.handlers", "src.presentation.web_admin"]
@@ -172,9 +179,17 @@ class Container(containers.DeclarativeContainer):
         session_composition_strategy=session_composition_strategy,
     )
     plan_variation_seed_factory = providers.Singleton(PlanVariationSeedFactory)
+    planning_defaults_policy = providers.Singleton(PlanningDefaultsPolicy)
+    adherence_score_policy = providers.Singleton(AdherenceScorePolicy)
+    goal_phase_progression_policy = providers.Singleton(GoalPhaseProgressionPolicy)
+    reflection_readiness_policy = providers.Singleton(ReflectionReadinessPolicy)
     planning_context_factory = providers.Singleton(
         PlanningContextFactory,
         seed_factory=plan_variation_seed_factory,
+        defaults_policy=planning_defaults_policy,
+        adherence_policy=adherence_score_policy,
+        phase_policy=goal_phase_progression_policy,
+        reflection_readiness_policy=reflection_readiness_policy,
     )
     load_scaling_policy = providers.Singleton(LoadScalingPolicy)
     training_plan_generator = providers.Factory(
@@ -341,5 +356,10 @@ class Container(containers.DeclarativeContainer):
     training_plan_admin_controller = providers.Factory(
         TrainingPlanAdminController,
         service=training_plan_admin_service,
+    )
+    workout_analytics_service = providers.Factory(WorkoutAnalyticsAdminService, uow=uow)
+    workout_analytics_controller = providers.Factory(
+        WorkoutAnalyticsController,
+        service=workout_analytics_service,
     )
 

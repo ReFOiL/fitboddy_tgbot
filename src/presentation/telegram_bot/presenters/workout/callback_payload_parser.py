@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from src.domain.value_objects.workout_profile import PerceivedEffort
+from src.domain.value_objects.workout_profile import PerceivedEffort, ReflectionEnergy
 
 
 class WorkoutCallbackPayloadParser:
@@ -28,3 +28,19 @@ class WorkoutCallbackPayloadParser:
         except ValueError:
             return None
         return level, scheduled_id
+
+    @staticmethod
+    def reflection(raw: str | None) -> tuple[ReflectionEnergy, int] | None:
+        if not raw:
+            return None
+        parts = raw.split(":")
+        if len(parts) != 3 or parts[0] != "reflect":
+            return None
+        energy = ReflectionEnergy.from_raw(parts[1])
+        if energy is None:
+            return None
+        try:
+            scheduled_id = int(parts[2])
+        except ValueError:
+            return None
+        return energy, scheduled_id

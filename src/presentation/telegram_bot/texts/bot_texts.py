@@ -12,7 +12,7 @@ class BotTexts(StrEnum):
     WORKOUTS_EXITED = "Возвращаю в главное меню."
 
     PLAN_NO_PLAN = "Сначала пройдите анкету и получите план: нажмите «Тренировки» в меню."
-    PLAN_HEADER = "📅 Ваш план на месяц"
+    PLAN_HEADER = "📅 Ваш план на неделю"
     TODAY_NO_WORKOUT = "На сегодня тренировки нет. Отдыхайте! 💪"
     TODAY_HEADER = "🏋️ Тренировка на сегодня"
     EXERCISE_NO_EXERCISE = "Упражнение не найдено."
@@ -23,6 +23,8 @@ class BotTexts(StrEnum):
     WORKOUT_DETAIL_HEADER = "🏋️ Тренировка"
     EFFORT_PROMPT = "Как по ощущениям?"
     EFFORT_SAVED = "Спасибо, учтём в будущем."
+    REFLECTION_PROMPT = "И коротко: как сейчас с энергией?"
+    REFLECTION_SAVED = "Отлично, записал. Это поможет точнее подстроить следующую неделю."
 
     QUESTIONNAIRE_COMPLETED = "🎉 Анкета завершена!"
     QUESTIONNAIRE_FINISHED_PROMPT = "Анкета завершена. Что дальше?"

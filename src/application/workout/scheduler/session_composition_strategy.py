@@ -9,7 +9,7 @@ from src.application.workout.scheduler.models import (
 )
 from src.application.workout.scheduler.policies import RecoveryOverlapScorer
 from src.domain.entities.exercise import Exercise
-from src.domain.value_objects.workout_profile import TrainingGoal
+from src.domain.value_objects.workout_profile import TrainingGoal, TrainingLevel
 
 
 @dataclass(slots=True)
@@ -28,7 +28,12 @@ class SessionCompositionStrategy:
 
     def compose_session(self, request: SessionCompositionRequest) -> SessionRecipe:
         target = self._session_size(
-            request.week, request.slot_index, request.goal, request.variation_seed
+            week=request.week,
+            slot_index=request.slot_index,
+            goal=request.goal,
+            level=request.level,
+            is_first_plan=request.is_first_plan,
+            variation_seed=request.variation_seed,
         )
         rng = self._rng(request.variation_seed, request.week, request.slot_index)
         by_cat = self._group_by_category(request.pool)
@@ -71,16 +76,33 @@ class SessionCompositionStrategy:
         week: int,
         slot_index: int,
         goal: TrainingGoal | None,
+        level: TrainingLevel | None,
+        is_first_plan: bool,
         variation_seed: int,
     ) -> int:
+        session_min = self.SESSION_SIZE_MIN
+        session_max = self.SESSION_SIZE_MAX
+        if is_first_plan:
+            if goal == TrainingGoal.REHABILITATION:
+                session_min = 3
+                session_max = 4
+            elif level == TrainingLevel.BEGINNER:
+                session_min = 3
+                session_max = 5
+            elif level == TrainingLevel.INTERMEDIATE:
+                session_min = 4
+                session_max = 6
+            elif level == TrainingLevel.ADVANCED:
+                session_min = 5
+                session_max = 7
         mix = (variation_seed + week * 17 + slot_index * 5) & 0xFFFFFFFF
-        span = self.SESSION_SIZE_MAX - self.SESSION_SIZE_MIN + 1
-        count = self.SESSION_SIZE_MIN + (mix % span)
+        span = session_max - session_min + 1
+        count = session_min + (mix % span)
         if goal == TrainingGoal.WEIGHT_LOSS and (mix >> 4) % 4 == 0:
-            count = max(self.SESSION_SIZE_MIN, count - 1)
+            count = max(session_min, count - 1)
         if goal in (TrainingGoal.MUSCLE_GAIN, TrainingGoal.MAINTENANCE) and (mix >> 5) % 5 == 0:
-            count = min(self.SESSION_SIZE_MAX, count + 1)
-        return max(self.SESSION_SIZE_MIN, min(self.SESSION_SIZE_MAX, count))
+            count = min(session_max, count + 1)
+        return max(session_min, min(session_max, count))
 
     @staticmethod
     def _rng(variation_seed: int, week: int, slot_index: int) -> random.Random:

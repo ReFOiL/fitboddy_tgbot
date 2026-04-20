@@ -16,6 +16,17 @@ class SmartExerciseMatcher:
         self._uow = uow
         self._catalog_matcher = catalog_matcher or CatalogExerciseMatcher()
 
-    async def match(self, user_answers: list[UserAnswer], *, limit: int = 50) -> list[Exercise]:
+    async def match(
+        self,
+        user_answers: list[UserAnswer],
+        *,
+        limit: int = 50,
+        recent_exercise_ids: set[int] | None = None,
+    ) -> list[Exercise]:
         all_exercises = await self._uow.exercises.list_all()
-        return self._catalog_matcher.match(all_exercises, user_answers, limit=limit)
+        return self._catalog_matcher.match(
+            all_exercises,
+            user_answers,
+            limit=limit,
+            recent_exercise_ids=recent_exercise_ids or set(),
+        )

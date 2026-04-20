@@ -22,6 +22,7 @@ from src.application.use_cases.workout.query.models import (
     ExerciseDetailViewData,
     MyPlanViewData,
     TodayWorkoutViewData,
+    WorkoutCycleProgressSummary,
 )
 from src.application.use_cases.workout.query.user_resolver import WorkoutTelegramUserResolver
 
@@ -34,6 +35,7 @@ __all__ = [
     "WorkoutQueryExerciseNotFound",
     "WorkoutQueryAccessDenied",
     "MyPlanViewData",
+    "WorkoutCycleProgressSummary",
     "TodayWorkoutViewData",
     "ExerciseDetailViewData",
     "CompletedTodayWorkoutData",

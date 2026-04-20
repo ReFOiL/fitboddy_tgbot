@@ -7,6 +7,7 @@ import structlog
 from datetime import date
 
 from src.application.interfaces.repositories import UnitOfWork
+from src.application.services.metrics import plan_generation_runs_total
 from src.application.workout.scheduler import (
     AbstractWorkoutScheduler,
     WorkoutScheduler,
@@ -71,6 +72,13 @@ class TrainingPlanGenerator:
                 start_date=context.anchor,
                 weeks=4,
                 goal=context.goal,
+                level=context.level,
+                phase=context.phase,
+                cycle_index=context.cycle_index,
+                adherence_score=context.adherence_score,
+                readiness_multiplier=context.readiness_multiplier,
+                weekly_volume_by_week=context.weekly_volume_by_week,
+                is_first_plan=context.is_first_plan,
                 variation_seed=context.variation_seed,
             )
         )
@@ -126,8 +134,16 @@ class TrainingPlanGenerator:
             plan_id=plan.id,
             workouts=len(items),
             wpw=context.workouts_per_week,
+            level=int(context.level),
+            is_first_plan=context.is_first_plan,
             training_load_multiplier=context.user_load,
             start_date=plan.start_date.isoformat(),
             end_date=plan.end_date.isoformat(),
         )
+        plan_generation_runs_total.labels(
+            goal=str(context.goal),
+            level=str(int(context.level)),
+            phase=context.phase,
+            is_first_plan=str(context.is_first_plan).lower(),
+        ).inc()
         return plan

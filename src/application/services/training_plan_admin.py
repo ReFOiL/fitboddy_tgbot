@@ -10,6 +10,7 @@ from src.domain.entities.training_plan import (
     TrainingPlan,
     TrainingPlanStatus,
 )
+from src.domain.value_objects.workout_profile import PerceivedEffort
 
 
 class TrainingPlanAdminService:
@@ -75,7 +76,7 @@ class TrainingPlanAdminService:
         volume_multiplier: float | None = None,
         is_completed: bool | None = None,
         completed_at: datetime | None = None,
-        perceived_effort: str | None = None,
+        perceived_effort: PerceivedEffort | str | None = None,
     ) -> ScheduledWorkout | None:
         async with self._uow:
             sw = await self._scheduled_for_user(user_id, scheduled_id)
@@ -112,7 +113,13 @@ class TrainingPlanAdminService:
                 sw.completed_at = completed_at
 
             if perceived_effort is not None:
-                sw.perceived_effort = perceived_effort if perceived_effort != "" else None
+                if perceived_effort == "":
+                    sw.perceived_effort = None
+                else:
+                    parsed = PerceivedEffort.from_raw(perceived_effort)
+                    if parsed is None:
+                        raise ValueError("perceived_effort должен быть easy | ok | hard")
+                    sw.perceived_effort = parsed
 
             await self._uow.commit()
 

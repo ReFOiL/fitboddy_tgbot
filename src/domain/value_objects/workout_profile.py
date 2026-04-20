@@ -88,3 +88,19 @@ class PerceivedEffort(StrEnum):
             if item.value == normalized:
                 return item
         return None
+
+
+class ReflectionEnergy(StrEnum):
+    LOW = "low"
+    OK = "ok"
+    HIGH = "high"
+
+    @classmethod
+    def from_raw(cls, raw: str | "ReflectionEnergy" | None) -> "ReflectionEnergy | None":
+        if isinstance(raw, ReflectionEnergy):
+            return raw
+        normalized = (raw or "").strip().lower()
+        for item in cls:
+            if item.value == normalized:
+                return item
+        return None

@@ -9,11 +9,15 @@ from src.presentation.telegram_bot.presenters.workout.load_formatter import Work
 from src.presentation.telegram_bot.presenters.workout.plan_list_formatter import (
     WorkoutPlanListFormatter,
 )
+from src.presentation.telegram_bot.presenters.workout.reflection_keyboard import (
+    WorkoutReflectionKeyboardBuilder,
+)
 
 __all__ = [
     "WorkoutLoadFormatter",
     "WorkoutPlanListFormatter",
     "WorkoutEffortKeyboardBuilder",
+    "WorkoutReflectionKeyboardBuilder",
     "WorkoutCallbackPayloadParser",
     "WorkoutDetailFormatter",
 ]

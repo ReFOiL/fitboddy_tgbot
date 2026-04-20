@@ -1,3 +1,4 @@
+from src.application.workout.feedback.nudge_policy import SmartNudge, WorkoutNudgePolicy
 from src.application.workout.feedback.policy import (
     EffortNormalizationPolicy,
     TrainingLoadProgressionPolicy,
@@ -8,4 +9,6 @@ __all__ = [
     "EffortNormalizationPolicy",
     "TrainingLoadProgressionPolicy",
     "TrainingLoadAdaptationService",
+    "SmartNudge",
+    "WorkoutNudgePolicy",
 ]

@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from datetime import date
 
 from src.domain.entities.exercise import Exercise
-from src.domain.value_objects.workout_profile import TrainingGoal
+from src.domain.value_objects.workout_profile import TrainingGoal, TrainingLevel
 
 
 @dataclass(slots=True)
@@ -34,6 +34,13 @@ class WorkoutScheduleRequest:
     start_date: date
     weeks: int = 4
     goal: TrainingGoal | None = None
+    level: TrainingLevel | None = None
+    phase: str = "accumulation"
+    cycle_index: int = 1
+    adherence_score: float = 1.0
+    readiness_multiplier: float = 1.0
+    weekly_volume_by_week: dict[int, float] | None = None
+    is_first_plan: bool = False
     variation_seed: int = 0
 
 
@@ -80,6 +87,8 @@ class SessionCompositionRequest:
     goal: TrainingGoal | None
     variation_seed: int
     recent_groups: set[str]
+    level: TrainingLevel | None = None
+    is_first_plan: bool = False
 
 
 class AbstractWorkoutScheduler(ABC):

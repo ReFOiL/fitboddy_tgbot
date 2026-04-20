@@ -12,10 +12,14 @@ from src.application.use_cases.workout.callback.get_detail_use_case import GetWo
 from src.application.use_cases.workout.callback.models import (
     CompleteWorkoutRequest,
     SaveEffortRequest,
+    SaveReflectionRequest,
     WorkoutDetailRequest,
     WorkoutDetailResult,
 )
 from src.application.use_cases.workout.callback.save_effort_use_case import SaveWorkoutEffortUseCase
+from src.application.use_cases.workout.callback.save_reflection_use_case import (
+    SaveWorkoutReflectionUseCase,
+)
 
 __all__ = [
     "WorkoutCallbackError",
@@ -27,7 +31,9 @@ __all__ = [
     "WorkoutDetailRequest",
     "CompleteWorkoutRequest",
     "SaveEffortRequest",
+    "SaveReflectionRequest",
     "GetWorkoutDetailUseCase",
     "CompleteWorkoutUseCase",
     "SaveWorkoutEffortUseCase",
+    "SaveWorkoutReflectionUseCase",
 ]

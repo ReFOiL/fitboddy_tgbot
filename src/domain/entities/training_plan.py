@@ -8,6 +8,7 @@ from sqlalchemy import Boolean, CheckConstraint, Date, DateTime, Enum, Float, Fo
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.domain.entities.base import Base
+from src.domain.value_objects.workout_profile import PerceivedEffort
 
 if TYPE_CHECKING:
     from src.domain.entities.user import User
@@ -76,7 +77,7 @@ class ScheduledWorkout(Base):
     volume_multiplier: Mapped[float] = mapped_column(Float, default=1.0)
     is_completed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
-    perceived_effort: Mapped[str | None] = mapped_column(
+    perceived_effort: Mapped[PerceivedEffort | None] = mapped_column(
         String(16),
         nullable=True,
         doc="После тренировки: easy | ok | hard",

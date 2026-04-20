@@ -46,7 +46,12 @@ class UserPlanOrchestrator:
                     logger.info("user_plan.archived_previous", user_id=user_id, old_plan_id=active_plan.id)
 
                 matcher = SmartExerciseMatcher(uow)
-                exercises = await matcher.match(answers, limit=50)
+                recent_exercise_ids = await self._recent_cycle_exercise_ids(uow, user_id)
+                exercises = await matcher.match(
+                    answers,
+                    limit=50,
+                    recent_exercise_ids=recent_exercise_ids,
+                )
                 if not exercises:
                     logger.warning("user_plan.exercise_matcher_empty", user_id=user_id)
                     return None
@@ -70,3 +75,15 @@ class UserPlanOrchestrator:
 
         async with uow:
             return await uow.training_plans.get_active_for_user(user_id)
+
+    async def _recent_cycle_exercise_ids(self, uow: UnitOfWork, user_id: int) -> set[int]:
+        plans = await uow.training_plans.list_for_user(user_id, limit=1)
+        if not plans:
+            return set()
+        last_plan = plans[0]
+        workouts = await uow.scheduled_workouts.list_by_plan_id(last_plan.id)
+        out: set[int] = set()
+        for workout in workouts:
+            for line in workout.session_exercises:
+                out.add(line.exercise_id)
+        return out

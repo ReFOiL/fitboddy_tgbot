@@ -8,6 +8,7 @@ from aiogram.types import CallbackQuery
 from dependency_injector.wiring import Provide, inject
 
 from src.application.interfaces.repositories import UnitOfWork
+from src.application.services.metrics import workout_nudges_total
 from src.application.use_cases.workout.callback import (
     CallbackUserNotFoundError,
     CallbackWorkoutAccessDeniedError,
@@ -17,14 +18,18 @@ from src.application.use_cases.workout.callback import (
     CompleteWorkoutUseCase,
     GetWorkoutDetailUseCase,
     SaveEffortRequest,
+    SaveReflectionRequest,
     SaveWorkoutEffortUseCase,
+    SaveWorkoutReflectionUseCase,
     WorkoutDetailRequest,
 )
+from src.application.workout.feedback import WorkoutNudgePolicy
 from src.presentation.telegram_bot.keyboards.builders import main_menu
 from src.presentation.telegram_bot.presenters.workout import (
     WorkoutCallbackPayloadParser,
     WorkoutDetailFormatter,
     WorkoutEffortKeyboardBuilder,
+    WorkoutReflectionKeyboardBuilder,
 )
 from src.presentation.telegram_bot.texts import BotTexts
 from src.shared.di import Container
@@ -129,5 +134,45 @@ async def cb_effort(
 
     logger.info("bot.workout.effort", user_id=user_id, scheduled_id=sid, level=level)
 
+    async with uow:
+        recent_difficulties = await uow.workout_feedback.list_last_difficulties(user_id, limit=3)
+    nudge = WorkoutNudgePolicy().build_nudge(recent_difficulties, level)
+    workout_nudges_total.labels(kind=nudge.kind).inc()
+
     await callback.answer()
-    await callback.message.answer(BotTexts.EFFORT_SAVED, reply_markup=main_menu())
+    await callback.message.answer(BotTexts.EFFORT_SAVED + "\n\n" + nudge.text)
+    reflection_kb = WorkoutReflectionKeyboardBuilder.build(sid)
+    await callback.message.answer(BotTexts.REFLECTION_PROMPT, reply_markup=reflection_kb)
+
+
+@router.callback_query(F.data.startswith("reflect:"))
+@inject
+async def cb_reflection(
+    callback: CallbackQuery,
+    uow: UnitOfWork = Provide[Container.uow],
+) -> None:
+    if not callback.from_user or not callback.message:
+        await callback.answer()
+        return
+    parsed = WorkoutCallbackPayloadParser.reflection(callback.data)
+    if parsed is None:
+        await callback.answer()
+        return
+    energy, sid = parsed
+    try:
+        user_id = await SaveWorkoutReflectionUseCase(uow).save_reflection(
+            SaveReflectionRequest(
+                tg_user_id=callback.from_user.id,
+                scheduled_id=sid,
+                energy=energy,
+            )
+        )
+    except CallbackUserNotFoundError:
+        await callback.answer(BotTexts.WORKOUTS_REGISTER_FIRST, show_alert=True)
+        return
+    except (CallbackWorkoutNotFoundError, CallbackWorkoutAccessDeniedError):
+        await callback.answer(BotTexts.WORKOUT_NOT_YOURS, show_alert=True)
+        return
+    logger.info("bot.workout.reflection", user_id=user_id, scheduled_id=sid, energy=energy)
+    await callback.answer()
+    await callback.message.answer(BotTexts.REFLECTION_SAVED, reply_markup=main_menu())

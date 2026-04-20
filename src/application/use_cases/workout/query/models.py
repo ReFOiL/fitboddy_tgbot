@@ -2,15 +2,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from src.application.workout.plan_management.models import WorkoutCycleProgressSummary
 from src.domain.entities.exercise import Exercise
 from src.domain.entities.training_plan import ScheduledWorkout, ScheduledWorkoutExercise, TrainingPlan
-
 
 @dataclass(slots=True)
 class MyPlanViewData:
     user_id: int
     telegram_id: int
     plan: TrainingPlan
+    progress: WorkoutCycleProgressSummary | None = None
 
 
 @dataclass(slots=True)

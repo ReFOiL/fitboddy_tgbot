@@ -37,5 +37,5 @@ async def cmd_myplan(
     except WorkoutQueryPlanNotFound:
         await message.answer(BotTexts.PLAN_NO_PLAN, reply_markup=main_menu())
         return
-    text, markup = WorkoutPlanListFormatter().format_plan(data.plan)
+    text, markup = WorkoutPlanListFormatter().format_plan(data)
     await message.answer(text, reply_markup=markup or main_menu())

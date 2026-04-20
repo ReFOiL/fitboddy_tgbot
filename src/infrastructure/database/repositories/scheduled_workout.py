@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from src.application.interfaces.repositories import IScheduledWorkoutRepository
 from src.domain.entities.training_plan import ScheduledWorkout, ScheduledWorkoutExercise
+from src.domain.value_objects.workout_profile import PerceivedEffort
 from src.infrastructure.database.repositories.base import SQLAlchemyRepository
 
 
@@ -57,11 +58,11 @@ class ScheduledWorkoutRepository(SQLAlchemyRepository, IScheduledWorkoutReposito
             .values(is_completed=True, completed_at=datetime.now(timezone.utc))
         )
 
-    async def set_perceived_effort(self, scheduled_id: int, effort: str) -> None:
+    async def set_perceived_effort(self, scheduled_id: int, effort: PerceivedEffort) -> None:
         await self._session.execute(
             update(ScheduledWorkout)
             .where(ScheduledWorkout.id == scheduled_id)
-            .values(perceived_effort=effort)
+            .values(perceived_effort=str(effort))
         )
 
     async def has_other_on_plan_date(
