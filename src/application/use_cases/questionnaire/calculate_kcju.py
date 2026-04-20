@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from src.domain.value_objects.anthropometry import Anthropometry
 from src.domain.value_objects.kcju import Kcju
+from src.domain.value_objects.workout_profile import TrainingGoal
 
 
 def calculate_kcju(
@@ -16,9 +17,10 @@ def calculate_kcju(
 
     calories = int(bmr * activity_multiplier)
 
-    if goal == "weight_loss":
+    normalized_goal = TrainingGoal.from_raw(goal)
+    if normalized_goal == TrainingGoal.WEIGHT_LOSS:
         calories = int(calories * 0.85)
-    elif goal == "muscle_gain":
+    elif normalized_goal == TrainingGoal.MUSCLE_GAIN:
         calories = int(calories * 1.1)
 
     protein = int(anthropometry.weight_kg * 2.0)

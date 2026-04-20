@@ -3,7 +3,10 @@ from __future__ import annotations
 
 import pytest
 
-from src.application.workout.feedback.policy import TrainingLoadPolicy
+from src.application.workout.feedback.policy import (
+    EffortNormalizationPolicy,
+    TrainingLoadProgressionPolicy,
+)
 
 
 @pytest.mark.parametrize(
@@ -18,9 +21,10 @@ from src.application.workout.feedback.policy import TrainingLoadPolicy
     ],
 )
 def test_next_training_load_multiplier(current: float, last3: list[str], expected: float) -> None:
-    assert TrainingLoadPolicy.next_multiplier(current, last3) == pytest.approx(expected)
+    assert TrainingLoadProgressionPolicy().next_multiplier(current, last3) == pytest.approx(expected)
 
 
 def test_normalize_effort() -> None:
-    assert TrainingLoadPolicy.normalize_effort("ok") == "normal"
-    assert TrainingLoadPolicy.normalize_effort("EASY") == "easy"
+    policy = EffortNormalizationPolicy()
+    assert policy.normalize("ok") == "normal"
+    assert policy.normalize("EASY") == "easy"

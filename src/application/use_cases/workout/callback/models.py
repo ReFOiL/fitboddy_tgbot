@@ -1,0 +1,31 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+from src.domain.entities.training_plan import ScheduledWorkout
+from src.domain.value_objects.workout_profile import PerceivedEffort
+
+
+@dataclass(slots=True)
+class WorkoutDetailResult:
+    user_id: int
+    scheduled_workout: ScheduledWorkout
+
+
+@dataclass(slots=True)
+class WorkoutDetailRequest:
+    tg_user_id: int
+    scheduled_id: int
+
+
+@dataclass(slots=True)
+class CompleteWorkoutRequest:
+    tg_user_id: int
+    scheduled_id: int
+
+
+@dataclass(slots=True)
+class SaveEffortRequest:
+    tg_user_id: int
+    scheduled_id: int
+    level: PerceivedEffort

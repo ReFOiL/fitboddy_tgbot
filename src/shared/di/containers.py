@@ -38,16 +38,29 @@ from src.domain.questionnaire import (
 from src.domain.value_objects.questionnaire import AnswerType
 from src.application.services.subscription import PremiumAccess, SubscriptionService
 from src.application.use_cases.payment.cryptobot import CryptoBotPaymentUseCase
-from src.application.use_cases.workout.callback_use_cases import WorkoutCallbackUseCases
+from src.application.use_cases.workout.query import (
+    CompleteTodayWorkoutUseCase,
+    GetExerciseDetailUseCase,
+    GetMyPlanUseCase,
+    GetTodayWorkoutUseCase,
+)
 from src.application.workout.scheduler.service import WorkoutScheduler
 from src.application.workout.scheduler.policies import (
-    RecoveryPolicy,
+    RecoveryOverlapScorer,
+    RecoveryPenaltyPolicy,
+    RecoveryWindowPolicy,
     WeeklyPatternPolicy,
 )
 from src.application.workout.scheduler.strategies import (
     AnchorSelectionStrategy,
     SessionCompositionStrategy,
 )
+from src.application.workout.planning import (
+    LoadScalingPolicy,
+    PlanVariationSeedFactory,
+    PlanningContextFactory,
+)
+from src.application.workout.plan_management import ActivePlanPolicy, UserPlanOrchestrator
 from src.application.services.training_plan_generator import TrainingPlanGenerator
 from src.application.services.user_plan_service import UserPlanService
 from src.application.services.training_plan_admin import TrainingPlanAdminService
@@ -141,27 +154,63 @@ class Container(containers.DeclarativeContainer):
     )
 
     weekly_pattern_policy = providers.Singleton(WeeklyPatternPolicy)
-    recovery_policy = providers.Singleton(RecoveryPolicy)
+    recovery_window_policy = providers.Singleton(RecoveryWindowPolicy)
+    recovery_penalty_policy = providers.Singleton(RecoveryPenaltyPolicy)
+    recovery_overlap_scorer = providers.Singleton(RecoveryOverlapScorer)
     anchor_selection_strategy = providers.Singleton(AnchorSelectionStrategy)
     session_composition_strategy = providers.Singleton(
         SessionCompositionStrategy,
-        recovery_policy=recovery_policy,
+        overlap_scorer=recovery_overlap_scorer,
     )
     workout_scheduler = providers.Singleton(
         WorkoutScheduler,
         weekly_pattern_policy=weekly_pattern_policy,
         anchor_selection_strategy=anchor_selection_strategy,
-        recovery_policy=recovery_policy,
+        recovery_window_policy=recovery_window_policy,
+        recovery_penalty_policy=recovery_penalty_policy,
+        recovery_overlap_scorer=recovery_overlap_scorer,
         session_composition_strategy=session_composition_strategy,
     )
-    training_plan_generator = providers.Factory(TrainingPlanGenerator, scheduler=workout_scheduler)
+    plan_variation_seed_factory = providers.Singleton(PlanVariationSeedFactory)
+    planning_context_factory = providers.Singleton(
+        PlanningContextFactory,
+        seed_factory=plan_variation_seed_factory,
+    )
+    load_scaling_policy = providers.Singleton(LoadScalingPolicy)
+    training_plan_generator = providers.Factory(
+        TrainingPlanGenerator,
+        scheduler=workout_scheduler,
+        context_factory=planning_context_factory,
+        load_scaling_policy=load_scaling_policy,
+    )
+    active_plan_policy = providers.Singleton(ActivePlanPolicy)
+    user_plan_orchestrator = providers.Factory(
+        UserPlanOrchestrator,
+        plan_generator=training_plan_generator,
+        active_plan_policy=active_plan_policy,
+    )
     user_plan_service = providers.Factory(
         UserPlanService,
         uow=uow,
-        plan_generator=training_plan_generator,
+        orchestrator=user_plan_orchestrator,
     )
-    workout_callback_use_cases = providers.Factory(
-        WorkoutCallbackUseCases,
+    get_my_plan_use_case = providers.Factory(
+        GetMyPlanUseCase,
+        uow=uow,
+        user_plan_service=user_plan_service,
+    )
+    get_today_workout_use_case = providers.Factory(
+        GetTodayWorkoutUseCase,
+        uow=uow,
+        user_plan_service=user_plan_service,
+    )
+    complete_today_workout_use_case = providers.Factory(
+        CompleteTodayWorkoutUseCase,
+        uow=uow,
+        user_plan_service=user_plan_service,
+    )
+    get_exercise_detail_use_case = providers.Factory(
+        GetExerciseDetailUseCase,
         uow=uow,
     )
 

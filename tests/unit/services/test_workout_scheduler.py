@@ -5,7 +5,11 @@ import pytest
 from datetime import date, timedelta
 
 from src.application.workout.scheduler import WorkoutScheduler
-from src.application.workout.scheduler.models import PlannedExerciseLine
+from src.application.workout.scheduler.models import (
+    AnchorSelectionRequest,
+    PlannedExerciseLine,
+    WorkoutScheduleRequest,
+)
 from src.domain.entities.exercise import Exercise
 
 
@@ -54,13 +58,29 @@ class TestWorkoutScheduler:
     def test_selects_anchor_count(
         self, scheduler: WorkoutScheduler, sample_exercises: list[Exercise]
     ) -> None:
-        anchors = scheduler._anchor_selection.select(sample_exercises, 3, week=1)
+        anchors = scheduler._anchor_selection.select_anchors(
+            AnchorSelectionRequest(
+                exercises=sample_exercises,
+                workouts_per_week=3,
+                week=1,
+                variation_seed=0,
+                goal=None,
+            )
+        )
         assert len(anchors) == 3
 
     def test_round_robin_by_category(
         self, scheduler: WorkoutScheduler, sample_exercises: list[Exercise]
     ) -> None:
-        anchors = scheduler._anchor_selection.select(sample_exercises, 3, week=1)
+        anchors = scheduler._anchor_selection.select_anchors(
+            AnchorSelectionRequest(
+                exercises=sample_exercises,
+                workouts_per_week=3,
+                week=1,
+                variation_seed=0,
+                goal=None,
+            )
+        )
         cats = [getattr(e, "workout_category", "") for e in anchors]
         assert len(set(cats)) >= 2
 
@@ -70,7 +90,14 @@ class TestWorkoutScheduler:
         workouts_per_week = 3
         start_date = date(2026, 2, 10)
         weeks = 4
-        result = scheduler.schedule_month(sample_exercises, workouts_per_week, start_date, weeks)
+        result = scheduler.build_schedule(
+            WorkoutScheduleRequest(
+                exercises=sample_exercises,
+                workouts_per_week=workouts_per_week,
+                start_date=start_date,
+                weeks=weeks,
+            )
+        )
         assert len(result) == workouts_per_week * weeks
         assert all(isinstance(s.lines[0], PlannedExerciseLine) for s in result)
         assert result[0].scheduled_for >= start_date
@@ -79,7 +106,14 @@ class TestWorkoutScheduler:
     def test_progresses_volume_multiplier(
         self, scheduler: WorkoutScheduler, sample_exercises: list[Exercise]
     ) -> None:
-        result = scheduler.schedule_month(sample_exercises, 2, date(2026, 2, 10), weeks=4)
+        result = scheduler.build_schedule(
+            WorkoutScheduleRequest(
+                exercises=sample_exercises,
+                workouts_per_week=2,
+                start_date=date(2026, 2, 10),
+                weeks=4,
+            )
+        )
         by_week: dict[int, list[float]] = {}
         for item in result:
             by_week.setdefault(item.week, []).append(item.volume_multiplier)
@@ -100,5 +134,13 @@ class TestWorkoutScheduler:
             )
             for i in range(1, 4)
         ]
-        anchors = scheduler._anchor_selection.select(exercises, 3, week=1)
+        anchors = scheduler._anchor_selection.select_anchors(
+            AnchorSelectionRequest(
+                exercises=exercises,
+                workouts_per_week=3,
+                week=1,
+                variation_seed=0,
+                goal=None,
+            )
+        )
         assert len(anchors) == 3

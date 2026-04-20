@@ -5,12 +5,20 @@ from datetime import date, timedelta
 import structlog
 
 from src.application.workout.scheduler.models import (
+    AnchorSelectionRequest,
     AbstractWorkoutScheduler,
     PlannedExerciseLine,
+    RecoveryPenaltyRequest,
+    RecoveryWindowRequest,
     ScheduledSessionItem,
+    SessionCompositionRequest,
+    WeeklyPatternRequest,
+    WorkoutScheduleRequest,
 )
 from src.application.workout.scheduler.policies import (
-    RecoveryPolicy,
+    RecoveryOverlapScorer,
+    RecoveryPenaltyPolicy,
+    RecoveryWindowPolicy,
     WEEKLY_VOLUME_BY_WEEK,
     WeeklyPatternPolicy,
 )
@@ -34,57 +42,68 @@ class WorkoutScheduler(AbstractWorkoutScheduler):
         self,
         weekly_pattern_policy: WeeklyPatternPolicy | None = None,
         anchor_selection_strategy: AnchorSelectionStrategy | None = None,
-        recovery_policy: RecoveryPolicy | None = None,
+        recovery_window_policy: RecoveryWindowPolicy | None = None,
+        recovery_penalty_policy: RecoveryPenaltyPolicy | None = None,
+        recovery_overlap_scorer: RecoveryOverlapScorer | None = None,
         session_composition_strategy: SessionCompositionStrategy | None = None,
     ) -> None:
         self._weekly_pattern = weekly_pattern_policy or WeeklyPatternPolicy()
         self._anchor_selection = anchor_selection_strategy or AnchorSelectionStrategy()
-        self._recovery = recovery_policy or RecoveryPolicy()
+        self._recovery_window = recovery_window_policy or RecoveryWindowPolicy()
+        self._recovery_penalty = recovery_penalty_policy or RecoveryPenaltyPolicy()
+        self._recovery_overlap = recovery_overlap_scorer or RecoveryOverlapScorer()
         self._session_composition = session_composition_strategy or SessionCompositionStrategy(
-            self._recovery
+            self._recovery_overlap
         )
 
-    def schedule_month(
-        self,
-        exercises: list[Exercise],
-        workouts_per_week: int,
-        start_date: date,
-        weeks: int = 4,
-        *,
-        goal: str | None = None,
-        variation_seed: int = 0,
-    ) -> list[ScheduledSessionItem]:
-        if not exercises or workouts_per_week < 1:
+    def build_schedule(self, request: WorkoutScheduleRequest) -> list[ScheduledSessionItem]:
+        if not request.exercises or request.workouts_per_week < 1:
             return []
-        workouts_per_week = min(workouts_per_week, 7)
+        workouts_per_week = min(request.workouts_per_week, 7)
 
         result: list[ScheduledSessionItem] = []
-        for week in range(1, weeks + 1):
+        for week in range(1, request.weeks + 1):
             week_volume = WEEKLY_VOLUME_BY_WEEK.get(week, 1.3)
-            week_start = start_date + timedelta(days=(week - 1) * 7)
-            offsets = self._weekly_pattern.offsets(workouts_per_week, variation_seed, week=week)
-            anchors = self._anchor_selection.select(
-                exercises,
-                workouts_per_week,
-                week,
-                variation_seed=variation_seed,
-                goal=goal,
+            week_start = request.start_date + timedelta(days=(week - 1) * 7)
+            offsets = self._weekly_pattern.choose_offsets(
+                WeeklyPatternRequest(
+                    workouts_per_week=workouts_per_week,
+                    variation_seed=request.variation_seed,
+                    week=week,
+                )
+            )
+            anchors = self._anchor_selection.select_anchors(
+                AnchorSelectionRequest(
+                    exercises=request.exercises,
+                    workouts_per_week=workouts_per_week,
+                    week=week,
+                    variation_seed=request.variation_seed,
+                    goal=request.goal,
+                )
             )
 
             for slot_index, (offset, anchor) in enumerate(zip(offsets, anchors, strict=False)):
                 scheduled_for = week_start + timedelta(days=offset)
                 recent_groups = self._recent_groups(result, scheduled_for)
-                recipe = self._session_composition.compose(
-                    pool=exercises,
-                    anchor=anchor,
-                    slot_index=slot_index,
-                    week=week,
-                    goal=goal,
-                    variation_seed=variation_seed,
-                    recent_groups=recent_groups,
+                recipe = self._session_composition.compose_session(
+                    SessionCompositionRequest(
+                        pool=request.exercises,
+                        anchor=anchor,
+                        slot_index=slot_index,
+                        week=week,
+                        goal=request.goal,
+                        variation_seed=request.variation_seed,
+                        recent_groups=recent_groups,
+                    )
                 )
                 lines = [self._prescribe(ex, sort_order=i + 1) for i, ex in enumerate(recipe.exercises)]
-                final_volume = round(week_volume * self._recovery.penalty(recent_groups, recipe.exercises), 3)
+                final_volume = round(
+                    week_volume
+                    * self._recovery_penalty.calculate_penalty(
+                        RecoveryPenaltyRequest(recent_groups=recent_groups, exercises=recipe.exercises)
+                    ),
+                    3,
+                )
 
                 result.append(
                     ScheduledSessionItem(
@@ -96,6 +115,12 @@ class WorkoutScheduler(AbstractWorkoutScheduler):
                     )
                 )
         return result
+
+    def _recent_groups(self, completed: list[ScheduledSessionItem], current_date: date) -> set[str]:
+        snapshots = [(item.scheduled_for, [line.exercise for line in item.lines]) for item in completed]
+        return self._recovery_window.collect_recent_groups(
+            RecoveryWindowRequest(sessions=snapshots, current_date=current_date)
+        )
 
     @staticmethod
     def _prescribe(exercise: Exercise, sort_order: int) -> PlannedExerciseLine:
@@ -116,7 +141,3 @@ class WorkoutScheduler(AbstractWorkoutScheduler):
             duration_seconds=None,
             rest_seconds=60,
         )
-
-    def _recent_groups(self, completed: list[ScheduledSessionItem], current_date: date) -> set[str]:
-        snapshots = [(item.scheduled_for, [line.exercise for line in item.lines]) for item in completed]
-        return self._recovery.recent_groups(snapshots, current_date)

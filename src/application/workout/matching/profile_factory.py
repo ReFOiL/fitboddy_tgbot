@@ -1,0 +1,39 @@
+from __future__ import annotations
+
+from src.application.workout.matching.models import ExerciseMatchingProfile
+from src.domain.entities.user_answer import UserAnswer
+from src.domain.value_objects.questionnaire_system import SystemQuestionKey
+from src.domain.value_objects.workout_profile import (
+    EquipmentName,
+    TrainingGoal,
+    TrainingLevel,
+    WorkoutLocation,
+)
+from src.shared.utils.profile_answers import AnswerLookup, UserAnswerExtractor
+
+
+class ExerciseMatchingProfileFactory:
+    def build_profile(self, user_answers: list[UserAnswer]) -> ExerciseMatchingProfile:
+        lookup = AnswerLookup(user_answers)
+        return ExerciseMatchingProfile(
+            allowed_equipment=self._allowed_equipment(user_answers),
+            level=TrainingLevel.from_raw(lookup.get_str(SystemQuestionKey.LEVEL)),
+            workout_location=WorkoutLocation.from_raw(
+                lookup.get_str(SystemQuestionKey.WORKOUT_LOCATION)
+            ),
+            goal=TrainingGoal.from_raw(lookup.get_str(SystemQuestionKey.GOAL)),
+        )
+
+    @staticmethod
+    def _allowed_equipment(user_answers: list[UserAnswer]) -> set[EquipmentName]:
+        names: set[EquipmentName] = {EquipmentName.NONE}
+        answer = UserAnswerExtractor.find_by_question_key(
+            user_answers, SystemQuestionKey.EQUIPMENT
+        )
+        if not answer:
+            return names
+        for equipment_name in UserAnswerExtractor.extract_equipment_names(answer):
+            parsed = EquipmentName.from_raw(equipment_name)
+            if parsed is not None:
+                names.add(parsed)
+        return names

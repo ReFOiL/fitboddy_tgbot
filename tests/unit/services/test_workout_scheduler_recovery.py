@@ -7,6 +7,7 @@ import pytest
 
 from src.application.workout.scheduler.models import (
     PlannedExerciseLine,
+    RecoveryPenaltyRequest,
     ScheduledSessionItem,
 )
 from src.application.workout.scheduler import WorkoutScheduler
@@ -70,7 +71,9 @@ def test_recovery_penalty_when_overlap() -> None:
         rest_seconds=60,
     )
     recent = {"legs", "core"}
-    assert s._recovery.penalty(recent, [line.exercise]) == pytest.approx(0.9)
+    assert s._recovery_penalty.calculate_penalty(
+        RecoveryPenaltyRequest(recent_groups=recent, exercises=[line.exercise])
+    ) == pytest.approx(0.9)
 
 
 def test_recovery_no_penalty_when_disjoint() -> None:
@@ -85,4 +88,6 @@ def test_recovery_no_penalty_when_disjoint() -> None:
         rest_seconds=60,
     )
     recent = {"legs"}
-    assert s._recovery.penalty(recent, [line.exercise]) == pytest.approx(1.0)
+    assert s._recovery_penalty.calculate_penalty(
+        RecoveryPenaltyRequest(recent_groups=recent, exercises=[line.exercise])
+    ) == pytest.approx(1.0)
