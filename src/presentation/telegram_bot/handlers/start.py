@@ -1,5 +1,7 @@
-from aiogram import F, Router
-from aiogram.filters import CommandStart
+from typing import Any
+
+from aiogram import Bot, F, Router
+from aiogram.filters import CommandObject, CommandStart
 from aiogram.types import Message
 from dependency_injector.wiring import Provide, inject
 
@@ -12,7 +14,19 @@ from src.shared.di import Container
 router = Router()
 
 
-@router.message(CommandStart())
+async def _start_without_payload(message: Message, bot: Bot) -> bool | dict[str, Any]:
+    # CommandStart() в aiogram 3 совпадает и с /start <код>.
+    # Код — это привязка уведомлений, пустой /start остаётся прежним.
+    parsed = await CommandStart()(message, bot)
+    if not isinstance(parsed, dict):
+        return False
+    command = parsed["command"]
+    if not isinstance(command, CommandObject) or command.args:
+        return False
+    return parsed
+
+
+@router.message(_start_without_payload)
 @router.message(F.text == "Старт")
 @inject
 async def start_handler(
