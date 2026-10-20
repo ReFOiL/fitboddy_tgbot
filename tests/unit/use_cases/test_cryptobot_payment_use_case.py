@@ -24,3 +24,10 @@ async def test_create_invoice_raises_when_payment_feature_disabled() -> None:
         )
         with pytest.raises(RuntimeError, match="Оплата отключена"):
             await uc.create_invoice(user_id=1, amount=10.0)
+
+
+@pytest.mark.asyncio
+async def test_payment_success_notification_text_is_unchanged() -> None:
+    notifier = AsyncMock()
+    await NotificationService(notifier).payment_success(15)
+    notifier.send_message.assert_awaited_once_with(15, "Оплата получена. Спасибо!")

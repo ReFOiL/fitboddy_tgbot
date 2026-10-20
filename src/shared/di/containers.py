@@ -9,6 +9,7 @@ from src.application.services.muscle_admin import MuscleAdminService
 from src.application.services.contraindication_admin import ContraindicationAdminService
 from src.application.services.equipment_admin import EquipmentAdminService
 from src.application.services.notification import NotificationService
+from src.application.services.telegram_link import TelegramLinkService
 from src.application.services.profile_completion import ProfileCompletionService
 from src.application.services.questionnaire import QuestionnaireService
 from src.application.factories.answer_builder_factory import AnswerBuilderFactory
@@ -90,6 +91,7 @@ from src.infrastructure.cache.redis_repository import RedisCache
 from src.infrastructure.database.session import create_engine, create_session_factory
 from src.infrastructure.database.unit_of_work import SQLAlchemyUnitOfWork
 from src.infrastructure.external.cryptobot.client import CryptoBotClient
+from src.infrastructure.external.plan_service.telegram_link_client import PlanTelegramLinkClient
 from src.infrastructure.external.file_storage import VideoFileStorage
 from src.infrastructure.external.minio_client import MinioClient
 from src.infrastructure.external.s3_storage.minio_client import MinioStorage
@@ -149,6 +151,16 @@ class Container(containers.DeclarativeContainer):
 
     notifier = providers.Factory(TelegramNotifier, bot=bot)
     notification_service = providers.Factory(NotificationService, notifier=notifier)
+    # Тот же Bot, что шлёт «Оплата получена». Токен — TELEGRAM_BOT_TOKEN, иначе BOT_TOKEN.
+    plan_telegram_link_client = providers.Singleton(
+        PlanTelegramLinkClient,
+        base_url=settings.provided.plan_service.url,
+        service_token=settings.provided.plan_service.internal_service_token,
+    )
+    telegram_link_service = providers.Factory(
+        TelegramLinkService,
+        gateway=plan_telegram_link_client,
+    )
     subscription_service = providers.Factory(SubscriptionService)
     premium_access = providers.Singleton(PremiumAccess, _settings=settings)
 

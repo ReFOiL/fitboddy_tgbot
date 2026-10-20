@@ -36,6 +36,8 @@ services:
       - "9000:9000"
       - "9001:9001"
 
+  # TELEGRAM_BOT_TOKEN, PLAN_SERVICE_URL и INTERNAL_SERVICE_TOKEN берутся из .env.
+  # Токен бота должен совпадать с воркером уведомлений plan-service.
   bot:
     build: .
     depends_on:

@@ -4,6 +4,12 @@ from enum import StrEnum
 
 
 class BotTexts(StrEnum):
+    TELEGRAM_LINK_OK = "Готово. Уведомления о тренировках будут приходить сюда."
+    TELEGRAM_LINK_INVALID = "Код неверный или истёк. Запросите новый в приложении."
+    TELEGRAM_LINK_UNAVAILABLE = "Не удалось привязать Telegram. Попробуйте позже."
+    TELEGRAM_LINK_USAGE = "Пришлите код из приложения командой /link КОД"
+    TELEGRAM_LINK_PRIVATE = "Привязать уведомления можно только в личном чате с ботом."
+
     START_WELCOME = (
         "Привет! Я Fitboddy 🤝\n"
         "Помогу собрать умный план и вести тебя по тренировкам.\n\n"

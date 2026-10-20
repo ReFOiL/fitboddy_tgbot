@@ -8,7 +8,16 @@ import pytest
 
 from src.application.services.subscription import PremiumAccess
 from src.domain.entities.user import Tariff, User
-from src.shared.config.settings import AppSettings
+from src.shared.config.settings import (
+    AppSettings,
+    BotSettings,
+    CryptoBotSettings,
+    DatabaseSettings,
+    MinioSettings,
+    ObservabilitySettings,
+    PlanServiceSettings,
+    RedisSettings,
+)
 
 
 def _user(
@@ -34,6 +43,20 @@ def _ends_naive(*, days_offset: int) -> datetime:
 
 class _PremiumAccessCallKwargs(TypedDict, total=False):
     now: datetime
+
+
+def _payment_settings(payment_on: bool) -> AppSettings:
+    # model_construct не должен читать окружение: вложенные настройки собираются явно.
+    return AppSettings.model_construct(
+        feature_payment_enabled=payment_on,
+        bot=BotSettings.model_construct(token="t"),
+        database=DatabaseSettings.model_construct(url="postgresql+asyncpg://u:p@localhost/db"),
+        redis=RedisSettings.model_construct(url="redis://localhost:6379/0"),
+        cryptobot=CryptoBotSettings.model_construct(api_token="", webhook_secret=""),
+        minio=MinioSettings.model_construct(endpoint="localhost:9000", access_key="a", secret_key="s"),
+        observability=ObservabilitySettings.model_construct(),
+        plan_service=PlanServiceSettings.model_construct(url="", internal_service_token=""),
+    )
 
 
 @pytest.mark.parametrize(
@@ -78,6 +101,6 @@ def test_user_has_premium_access(
     expected: bool,
     call_kwargs: _PremiumAccessCallKwargs,
 ) -> None:
-    settings = AppSettings.model_construct(feature_payment_enabled=payment_on)
+    settings = _payment_settings(payment_on)
     pa = PremiumAccess(_settings=settings)
     assert pa.user_has_premium_access(user, **call_kwargs) is expected
